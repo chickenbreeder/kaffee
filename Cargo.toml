@@ -2,5 +2,8 @@
 name = "kaffee"
 version = "0.1.0-pre"
 edition = "2021"
+description = "Small 2D framework"
+license = "Apache-2.0"
+repository = "https://github.com/chickenbreeder/kaffee"
 
 [dependencies]
