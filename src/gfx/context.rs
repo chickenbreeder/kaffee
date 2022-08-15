@@ -48,6 +48,11 @@ impl InnerRenderContext {
     async fn from_window(window: &Window) -> Self {
         let width = window.inner_size().width;
         let height = window.inner_size().height;
+        let scale_factor = window.scale_factor() as f32;
+        let logical_width = width as f32 / scale_factor;
+        let logical_height = height as f32 / scale_factor;
+
+        log::info!("Creating render context (w={width}, h={height}, sf={scale_factor})");
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());
         let surface = unsafe { instance.create_surface(window) };
@@ -96,7 +101,7 @@ impl InnerRenderContext {
             include_str!("../../res/shaders/default.frag.glsl"),
         );
 
-        let camera = Camera2D::new(width as f32, height as f32, 0., 0.);
+        let camera = Camera2D::new(logical_width, logical_height, 0., 0.);
 
         let batch_pipeline = BatchPipeline::new(
             &device,

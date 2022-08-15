@@ -42,6 +42,7 @@ pub struct App<H: EventHandler + 'static> {
 
 impl<H: EventHandler + 'static> App<H> {
     pub async fn new(s: &Settings, event_handler: H) -> Self {
+        env_logger::init();
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new()
