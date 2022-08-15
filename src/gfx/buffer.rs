@@ -83,6 +83,14 @@ impl<T: bytemuck::Pod> MutableBuffer<T> {
         })
     }
 
+    pub fn from_data(device: &wgpu::Device, usage: wgpu::BufferUsages, data: &[T]) -> Self {
+        Self(ImmutableBuffer::from_data(
+            device,
+            usage | wgpu::BufferUsages::COPY_DST,
+            data,
+        ))
+    }
+
     pub fn upload(&self, queue: &wgpu::Queue, data: &[T]) {
         let data = bytemuck::cast_slice(data);
         queue.write_buffer(&self.0.buffer, 0, data);

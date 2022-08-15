@@ -4,6 +4,7 @@ use wgpu::{RenderPipeline, ShaderModule, TextureFormat};
 
 use super::{
     buffer::{ImmutableBuffer, MutableBuffer},
+    camera::Camera2D,
     color::Color,
 };
 
@@ -22,6 +23,8 @@ pub struct BatchPipeline {
     render_pipeline: RenderPipeline,
     vertex_buffer: MutableBuffer<Vertex>,
     index_buffer: ImmutableBuffer<u16>,
+    camera_buffer: MutableBuffer<Camera2D>,
+    camera_bind_group: wgpu::BindGroup,
     vertices: Vec<Vertex>,
     vertices_off: usize,
 }
@@ -32,6 +35,7 @@ impl BatchPipeline {
         supported_formats: &[TextureFormat],
         vertex_shader: ShaderModule,
         fragment_shader: ShaderModule,
+        camera: &Camera2D,
     ) -> Self {
         let vertex_buffer: MutableBuffer<Vertex> =
             MutableBuffer::with_capacity(device, wgpu::BufferUsages::VERTEX, MAX_VERTEX_COUNT);
@@ -50,10 +54,36 @@ impl BatchPipeline {
         }
 
         let index_buffer = ImmutableBuffer::from_data(device, wgpu::BufferUsages::INDEX, &indices);
+        let camera_buffer =
+            MutableBuffer::from_data(device, wgpu::BufferUsages::UNIFORM, &[*camera]);
+
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: None,
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    count: None,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                }],
+            });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &&camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.handle().as_entire_binding(),
+            }],
+        });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&camera_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -101,6 +131,8 @@ impl BatchPipeline {
             render_pipeline,
             vertex_buffer,
             index_buffer,
+            camera_buffer,
+            camera_bind_group,
             vertices,
             vertices_off: 0,
         }
@@ -123,21 +155,25 @@ impl BatchPipeline {
         &self.index_buffer
     }
 
+    pub(crate) fn camera_bind_group(&self) -> &wgpu::BindGroup {
+        &self.camera_bind_group
+    }
+
     pub(crate) fn push_quad(&mut self, x: f32, y: f32, color: Color) {
         self.vertices[self.vertices_off] = Vertex {
-            pos: [x - 0.5, y + 0.5, 1.0],
+            pos: [x - 0.5, y + 0.5, 0.0],
             color: color.into(),
         };
         self.vertices[self.vertices_off + 1] = Vertex {
-            pos: [x + 0.5, y + 0.5, 1.0],
+            pos: [x + 0.5, y + 0.5, 0.0],
             color: color.into(),
         };
         self.vertices[self.vertices_off + 2] = Vertex {
-            pos: [x + 0.5, y - 0.5, 1.0],
+            pos: [x + 0.5, y - 0.5, 0.0],
             color: color.into(),
         };
         self.vertices[self.vertices_off + 3] = Vertex {
-            pos: [x - 0.5, y - 0.5, 1.0],
+            pos: [x - 0.5, y - 0.5, 0.0],
             color: color.into(),
         };
         self.vertices_off += 4;

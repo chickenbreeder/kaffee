@@ -8,7 +8,7 @@ use std::{
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use super::{batch::BatchPipeline, color::Color};
+use super::{batch::BatchPipeline, camera::Camera2D, color::Color};
 
 /// The [`RenderContext`] allows interactions with the GPU.
 pub struct RenderContext(InnerRenderContext);
@@ -41,10 +41,14 @@ pub struct InnerRenderContext {
     surface: wgpu::Surface,
     supported_formats: Vec<TextureFormat>,
     batch_pipeline: BatchPipeline,
+    camera: Camera2D,
 }
 
 impl InnerRenderContext {
     async fn from_window(window: &Window) -> Self {
+        let width = window.inner_size().width;
+        let height = window.inner_size().height;
+
         let instance = wgpu::Instance::new(wgpu::Backends::all());
         let surface = unsafe { instance.create_surface(window) };
         let adapter = instance
@@ -73,8 +77,8 @@ impl InnerRenderContext {
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_supported_formats(&adapter)[0],
-            width: window.inner_size().width,
-            height: window.inner_size().height,
+            width,
+            height,
             present_mode: wgpu::PresentMode::Fifo,
         };
 
@@ -92,8 +96,15 @@ impl InnerRenderContext {
             include_str!("../../res/shaders/default.frag.glsl"),
         );
 
-        let batch_pipeline =
-            BatchPipeline::new(&device, &supported_formats, vertex_shader, fragment_shader);
+        let camera = Camera2D::new(width as f32, height as f32, 0., 0.);
+
+        let batch_pipeline = BatchPipeline::new(
+            &device,
+            &supported_formats,
+            vertex_shader,
+            fragment_shader,
+            &camera,
+        );
 
         Self {
             instance,
@@ -102,6 +113,7 @@ impl InnerRenderContext {
             surface,
             supported_formats,
             batch_pipeline,
+            camera,
         }
     }
 
@@ -165,6 +177,7 @@ impl InnerRenderContext {
             });
 
             rpass.set_pipeline(&self.batch_pipeline.render_pipeline());
+            rpass.set_bind_group(0, self.batch_pipeline.camera_bind_group(), &[]);
             rpass.set_vertex_buffer(0, self.batch_pipeline.vertex_buffer().handle().slice(..));
             rpass.set_index_buffer(
                 self.batch_pipeline.index_buffer().handle().slice(..),
