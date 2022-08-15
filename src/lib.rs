@@ -1,14 +1,8 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+//! # kaffee - API Documentation
+//!
+//! kaffee is a simple 2D framework, built on top of [wgpu].
+//!
+//! [wgpu]: https://github.com/gfx-rs/wgpu/
+pub mod app;
+pub mod gfx;
+pub mod prelude;

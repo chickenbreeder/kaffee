@@ -1,10 +1,3 @@
-# kaffee
-
-This is an attempt at designing a 2D graphics API, heavily inspired by [macroquad](https://github.com/not-fl3/macroquad), on top of [wgpu](https://github.com/gfx-rs/wgpu). You should probably not use this (yet).
-
-## Example
-
-```rust
 use kaffee::prelude::*;
 
 struct GameState {}
@@ -28,4 +21,3 @@ fn main() {
     let app = pollster::block_on(App::new(&settings, state));
     app.run()
 }
-```
