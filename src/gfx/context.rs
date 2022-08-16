@@ -28,9 +28,9 @@ impl DerefMut for RenderContext {
 }
 
 impl RenderContext {
-    pub async fn from_window(window: &Window) {
+    pub async fn from_window(window: &Window) -> Self {
         let inner_context = InnerRenderContext::from_window(window).await;
-        unsafe { super::RENDER_CONTEXT = Some(RenderContext(inner_context)) };
+        RenderContext(inner_context)
     }
 }
 
