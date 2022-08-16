@@ -7,7 +7,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::gfx::RenderContext;
+use crate::gfx::GraphicsContext;
 
 #[derive(Debug)]
 pub struct Settings {
@@ -31,8 +31,9 @@ impl Default for Settings {
 pub struct App;
 
 pub trait EventHandler {
+    fn init(&mut self, ctx: &mut GraphicsContext);
     fn update(&mut self, dt: f32);
-    fn redraw(&mut self, ctx: &mut RenderContext);
+    fn redraw(&mut self, ctx: &mut GraphicsContext);
 }
 
 impl App {
@@ -50,7 +51,9 @@ impl App {
             .build(&event_loop)
             .expect("Failed to create window with given settings");
 
-        let mut render_context = RenderContext::from_window(&window).await;
+        let mut graphics_context = GraphicsContext::from_window(&window).await;
+
+        event_handler.init(&mut graphics_context);
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
@@ -61,7 +64,7 @@ impl App {
                 }
                 Event::RedrawRequested(_) => {
                     event_handler.update(1.);
-                    event_handler.redraw(&mut render_context);
+                    event_handler.redraw(&mut graphics_context);
                 }
                 Event::WindowEvent { ref event, .. } => match event {
                     WindowEvent::CloseRequested => {

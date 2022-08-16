@@ -2,11 +2,12 @@ use std::mem;
 
 use wgpu::{RenderPipeline, ShaderModule, TextureFormat};
 
-use crate::gfx::{
+use crate::{gfx::{
     buffer::{ImmutableBuffer, MutableBuffer},
     camera::Camera2D,
     color::Color,
-};
+    texture::Texture2D, texture_atlas::TextureAtlas,
+}, math::Rect};
 
 const MAX_QUAD_COUNT: u64 = 200;
 const MAX_VERTEX_COUNT: u64 = MAX_QUAD_COUNT * 4;
@@ -17,6 +18,7 @@ const MAX_INDEXES_COUNT: u64 = MAX_QUAD_COUNT * 6;
 pub(crate) struct Vertex {
     pub(crate) pos: [f32; 3],
     pub(crate) color: [f32; 3],
+    pub(crate) tex_coords: [f32; 2],
 }
 
 pub struct BatchPipeline {
@@ -25,17 +27,20 @@ pub struct BatchPipeline {
     index_buffer: ImmutableBuffer<u16>,
     camera_buffer: MutableBuffer<Camera2D>,
     camera_bind_group: wgpu::BindGroup,
+    diffuse_bind_group: wgpu::BindGroup,
     vertices: Vec<Vertex>,
     vertices_off: usize,
 }
 
 impl BatchPipeline {
-    pub fn new(
+    pub(crate) fn new(
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         supported_formats: &[TextureFormat],
         vertex_shader: ShaderModule,
         fragment_shader: ShaderModule,
         camera: &Camera2D,
+        texture_atlas: &TextureAtlas,
     ) -> Self {
         let vertex_buffer: MutableBuffer<Vertex> =
             MutableBuffer::with_capacity(device, wgpu::BufferUsages::VERTEX, MAX_VERTEX_COUNT);
@@ -72,6 +77,29 @@ impl BatchPipeline {
                 }],
             });
 
+        let diffuse_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: None,
+            });
+
         let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &&camera_bind_group_layout,
@@ -81,9 +109,24 @@ impl BatchPipeline {
             }],
         });
 
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &diffuse_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(texture_atlas.texture().view()),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(texture_atlas.texture().sampler()),
+                },
+            ],
+            label: None,
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[&camera_bind_group_layout],
+            bind_group_layouts: &[&camera_bind_group_layout, &diffuse_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -96,7 +139,7 @@ impl BatchPipeline {
                 buffers: &[wgpu::VertexBufferLayout {
                     array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2],
                 }],
             },
             fragment: Some(wgpu::FragmentState {
@@ -133,6 +176,7 @@ impl BatchPipeline {
             index_buffer,
             camera_buffer,
             camera_bind_group,
+            diffuse_bind_group,
             vertices,
             vertices_off: 0,
         }
@@ -159,22 +203,54 @@ impl BatchPipeline {
         &self.camera_bind_group
     }
 
+    pub(crate) fn diffuse_bind_group(&self) -> &wgpu::BindGroup {
+        &&self.diffuse_bind_group
+    }
+
     pub(crate) fn push_quad(&mut self, x: f32, y: f32, color: Color) {
         self.vertices[self.vertices_off] = Vertex {
             pos: [x - 0.5, y + 0.5, 0.0],
             color: color.into(),
+            tex_coords: [0., 1.],
         };
         self.vertices[self.vertices_off + 1] = Vertex {
             pos: [x + 0.5, y + 0.5, 0.0],
             color: color.into(),
+            tex_coords: [1., 1.],
         };
         self.vertices[self.vertices_off + 2] = Vertex {
             pos: [x + 0.5, y - 0.5, 0.0],
             color: color.into(),
+            tex_coords: [1., 0.],
         };
         self.vertices[self.vertices_off + 3] = Vertex {
             pos: [x - 0.5, y - 0.5, 0.0],
             color: color.into(),
+            tex_coords: [0., 0.],
+        };
+        self.vertices_off += 4;
+    }
+
+    pub(crate) fn push_textured_quad(&mut self, x: f32, y: f32, color: Color, uv: Rect) {
+        self.vertices[self.vertices_off] = Vertex {
+            pos: [x - 0.5, y + 0.5, 0.0],
+            color: color.into(),
+            tex_coords: [uv.min.x, uv.max.y],
+        };
+        self.vertices[self.vertices_off + 1] = Vertex {
+            pos: [x + 0.5, y + 0.5, 0.0],
+            color: color.into(),
+            tex_coords: [uv.max.x, uv.max.y],
+        };
+        self.vertices[self.vertices_off + 2] = Vertex {
+            pos: [x + 0.5, y - 0.5, 0.0],
+            color: color.into(),
+            tex_coords: [uv.max.x, uv.min.y],
+        };
+        self.vertices[self.vertices_off + 3] = Vertex {
+            pos: [x - 0.5, y - 0.5, 0.0],
+            color: color.into(),
+            tex_coords: [uv.min.x, uv.min.y],
         };
         self.vertices_off += 4;
     }

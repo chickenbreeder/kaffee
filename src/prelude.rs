@@ -2,5 +2,5 @@
 
 pub use crate::{
     app::{App, EventHandler, Settings},
-    gfx::{color::colors::*, RenderContext},
+    gfx::{color::colors::*, GraphicsContext},
 };

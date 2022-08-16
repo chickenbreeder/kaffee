@@ -6,7 +6,7 @@ pub mod color;
 pub mod context;
 
 mod pipeline;
+mod texture;
+mod texture_atlas;
 
-pub use context::RenderContext;
-
-use self::color::Color;
+pub use context::GraphicsContext;

@@ -4,5 +4,9 @@
 //!
 //! [wgpu]: https://github.com/gfx-rs/wgpu/
 pub mod app;
+pub mod error;
 pub mod gfx;
 pub mod prelude;
+
+mod fs;
+mod math;

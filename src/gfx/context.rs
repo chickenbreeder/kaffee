@@ -5,15 +5,18 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use glam::vec2;
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline};
+use crate::{error::ErrorKind, gfx::texture_atlas::TextureAtlas};
 
-/// The [`RenderContext`] allows interactions with the GPU.
-pub struct RenderContext(InnerRenderContext);
+use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline, texture::Texture2D};
 
-impl Deref for RenderContext {
+/// The [`GraphicsContext`] allows interactions with the GPU.
+pub struct GraphicsContext(InnerRenderContext);
+
+impl Deref for GraphicsContext {
     type Target = InnerRenderContext;
 
     fn deref(&self) -> &Self::Target {
@@ -21,16 +24,16 @@ impl Deref for RenderContext {
     }
 }
 
-impl DerefMut for RenderContext {
+impl DerefMut for GraphicsContext {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl RenderContext {
+impl GraphicsContext {
     pub async fn from_window(window: &Window) -> Self {
         let inner_context = InnerRenderContext::from_window(window).await;
-        RenderContext(inner_context)
+        Self(inner_context)
     }
 }
 
@@ -42,6 +45,7 @@ pub struct InnerRenderContext {
     supported_formats: Vec<TextureFormat>,
     batch_pipeline: BatchPipeline,
     camera: Camera2D,
+    texture_atlas: TextureAtlas,
 }
 
 impl InnerRenderContext {
@@ -102,13 +106,16 @@ impl InnerRenderContext {
         );
 
         let camera = Camera2D::new(logical_width, logical_height, 0., 0.);
+        let texture_atlas = TextureAtlas::from_path("./res/textures/atlas.png", &device, &queue, 2, 2, vec2(16., 16.)).unwrap();
 
         let batch_pipeline = BatchPipeline::new(
             &device,
+            &queue,
             &supported_formats,
             vertex_shader,
             fragment_shader,
             &camera,
+            &texture_atlas
         );
 
         Self {
@@ -119,6 +126,7 @@ impl InnerRenderContext {
             supported_formats,
             batch_pipeline,
             camera,
+            texture_atlas,
         }
     }
 
@@ -155,6 +163,11 @@ impl InnerRenderContext {
         self.batch_pipeline.push_quad(x, y, color);
     }
 
+    pub fn draw_atlas_index(&mut self, x: f32, y: f32, color: Color, index: u16) {
+        let region = self.texture_atlas.get_region(index);
+        self.batch_pipeline.push_textured_quad(x, y, color, region);
+    }
+
     pub fn end_frame(&mut self) {
         self.batch_pipeline.flush(&self.queue);
 
@@ -183,6 +196,7 @@ impl InnerRenderContext {
 
             rpass.set_pipeline(&self.batch_pipeline.render_pipeline());
             rpass.set_bind_group(0, self.batch_pipeline.camera_bind_group(), &[]);
+            rpass.set_bind_group(1, self.batch_pipeline.diffuse_bind_group(), &[]);
             rpass.set_vertex_buffer(0, self.batch_pipeline.vertex_buffer().handle().slice(..));
             rpass.set_index_buffer(
                 self.batch_pipeline.index_buffer().handle().slice(..),
@@ -193,5 +207,12 @@ impl InnerRenderContext {
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
+    }
+
+    pub fn load_texture<P>(&self, path: P) -> Result<Texture2D, ErrorKind>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        Texture2D::from_path(path, &self.device, &self.queue)
     }
 }
