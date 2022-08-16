@@ -2,7 +2,7 @@ use std::mem;
 
 use wgpu::{RenderPipeline, ShaderModule, TextureFormat};
 
-use super::{
+use crate::gfx::{
     buffer::{ImmutableBuffer, MutableBuffer},
     camera::Camera2D,
     color::Color,

@@ -8,7 +8,7 @@ use std::{
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use super::{batch::BatchPipeline, camera::Camera2D, color::Color};
+use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline};
 
 /// The [`RenderContext`] allows interactions with the GPU.
 pub struct RenderContext(InnerRenderContext);
