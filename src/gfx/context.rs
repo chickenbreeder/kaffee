@@ -106,7 +106,15 @@ impl InnerRenderContext {
         );
 
         let camera = Camera2D::new(logical_width, logical_height, 0., 0.);
-        let texture_atlas = TextureAtlas::from_path("./res/textures/atlas.png", &device, &queue, 2, 2, vec2(16., 16.)).unwrap();
+        let texture_atlas = TextureAtlas::from_path(
+            "./res/textures/atlas.png",
+            &device,
+            &queue,
+            2,
+            2,
+            vec2(16., 16.),
+        )
+        .unwrap();
 
         let batch_pipeline = BatchPipeline::new(
             &device,
@@ -115,7 +123,7 @@ impl InnerRenderContext {
             vertex_shader,
             fragment_shader,
             &camera,
-            &texture_atlas
+            &texture_atlas,
         );
 
         Self {

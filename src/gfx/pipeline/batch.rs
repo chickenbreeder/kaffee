@@ -2,12 +2,16 @@ use std::mem;
 
 use wgpu::{RenderPipeline, ShaderModule, TextureFormat};
 
-use crate::{gfx::{
-    buffer::{ImmutableBuffer, MutableBuffer},
-    camera::Camera2D,
-    color::Color,
-    texture::Texture2D, texture_atlas::TextureAtlas,
-}, math::Rect};
+use crate::{
+    gfx::{
+        buffer::{ImmutableBuffer, MutableBuffer},
+        camera::Camera2D,
+        color::Color,
+        texture::Texture2D,
+        texture_atlas::TextureAtlas,
+    },
+    math::Rect,
+};
 
 const MAX_QUAD_COUNT: u64 = 200;
 const MAX_VERTEX_COUNT: u64 = MAX_QUAD_COUNT * 4;

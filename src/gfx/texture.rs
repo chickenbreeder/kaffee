@@ -25,7 +25,11 @@ impl Texture2D {
         Texture2D::from_bytes(device, queue, &bytes)
     }
 
-    pub(crate) fn from_bytes(device: &wgpu::Device, queue: &wgpu::Queue, bytes: &[u8]) -> Result<Self, ErrorKind> {
+    pub(crate) fn from_bytes(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        bytes: &[u8],
+    ) -> Result<Self, ErrorKind> {
         let img = image::load_from_memory(bytes)?;
         let diffuse_rgba = img.to_rgba8();
         let dim = img.dimensions();
@@ -103,5 +107,4 @@ impl Texture2D {
     pub(crate) fn sampler(&self) -> &wgpu::Sampler {
         &self.sampler
     }
-
 }

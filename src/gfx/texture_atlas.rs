@@ -1,6 +1,6 @@
 use glam::{vec2, Vec2};
 
-use crate::{math::Rect, error::ErrorKind};
+use crate::{error::ErrorKind, math::Rect};
 
 use super::texture::Texture2D;
 
