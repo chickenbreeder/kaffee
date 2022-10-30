@@ -15,7 +15,7 @@ exclude = [
 winit = "0.27.5"
 wgpu = { version = "0.14", features = ["glsl"] }
 naga = "0.10"
-bytemuck = { version = "1", features = ["derive"] }
+bytemuck = { version = "1.12.2", features = ["derive"] }
 glam = { version = "0.22", features = ["bytemuck"] }
 log = "0.4"
 env_logger = "0.9"
