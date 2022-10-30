@@ -15,7 +15,7 @@ use crate::{
     math::Rect,
 };
 
-pub struct BatchPipeline {
+pub(crate) struct BatchPipeline {
     render_pipeline: RenderPipeline,
     vertex_buffer: MutableBuffer<Vertex>,
     index_buffer: ImmutableBuffer<u16>,

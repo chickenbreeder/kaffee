@@ -16,7 +16,5 @@ impl EventHandler for GameState {
 }
 
 fn main() {
-    let settings = Settings::default();
-    let state = GameState {};
-    pollster::block_on(App::run(&settings, state))
+    pollster::block_on(App::run(&Settings::default(), GameState {}))
 }

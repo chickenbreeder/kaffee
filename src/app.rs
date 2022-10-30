@@ -1,4 +1,27 @@
-//! The entry point for every application
+//! This module contains the necessary types for setting up a `kaffee` application.
+//!
+//! # Example
+//!
+//! The following example demonstrates the setup of an application:
+//!
+//! ```
+//! use kaffee::prelude::*;
+//!
+//! struct GameState;
+//!
+//! impl EventHandler for GameState {
+//!     fn update(&mut self, dt: f32) {}
+//!     fn redraw(&mut self, r: &mut RenderContext) {}
+//! }
+//!
+//! fn main() {
+//!     pollster::block_on(App::run(
+//!         &Settings::default(),
+//!         GameState {}
+//!     ))
+//! }
+//! ```
+//!
 
 use winit::{
     dpi::LogicalSize,
@@ -9,7 +32,7 @@ use winit::{
 
 use crate::gfx::RenderContext;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Settings {
     pub(crate) title: String,
     pub(crate) width: u16,
@@ -36,6 +59,7 @@ pub trait EventHandler {
 }
 
 impl App {
+    /// The entry point for every application built with `kaffee`.
     pub async fn run<H>(settings: &Settings, mut event_handler: H) -> !
     where
         H: 'static + EventHandler,

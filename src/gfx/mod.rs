@@ -5,6 +5,7 @@ pub mod buffer;
 pub mod camera;
 pub mod color;
 pub mod render;
+pub mod types;
 
 mod pipeline;
 mod texture;

@@ -1,5 +1,7 @@
 # kaffee
 
+[![Docs](https://docs.rs/kaffee/badge.svg)](https://docs.rs/kaffee/latest)
+
 This is an attempt at designing a simple 2D graphics API on top of [wgpu](https://github.com/gfx-rs/wgpu), inspired by [macroquad](https://github.com/not-fl3/macroquad). You should probably not use this (yet).
 
 ## Example
@@ -23,8 +25,10 @@ impl EventHandler for GameState {
 }
 
 fn main() {
-    let settings = Settings::default();
-    let state = GameState {};
-    pollster::block_on(App::run(&settings, state))
+    pollster::block_on(App::run(&Settings::default(), GameState {}))
 }
 ```
+
+## License
+
+Apache License, Version 2.0

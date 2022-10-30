@@ -1,3 +1,4 @@
+use glam::vec2;
 use std::mem;
 
 use super::{MAX_INDEXES_COUNT, MAX_QUAD_COUNT, MAX_VERTEX_COUNT};
@@ -12,6 +13,7 @@ pub struct BatchContext {
 }
 
 impl BatchContext {
+    /// Creates a `BatchContext` with the specified capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         let mut vertices = Vec::with_capacity(capacity);
         unsafe {
@@ -24,28 +26,13 @@ impl BatchContext {
         }
     }
 
+    /// Draws a quad with given position and color.
     pub fn draw_quad(&mut self, x: f32, y: f32, color: Color) {
-        self.vertices[self.vertices_off] = Vertex {
-            pos: [x - 0.5, y + 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [0., 1.],
+        let uv = Rect {
+            min: vec2(0., 0.),
+            max: vec2(1., 1.),
         };
-        self.vertices[self.vertices_off + 1] = Vertex {
-            pos: [x + 0.5, y + 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [1., 1.],
-        };
-        self.vertices[self.vertices_off + 2] = Vertex {
-            pos: [x + 0.5, y - 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [1., 0.],
-        };
-        self.vertices[self.vertices_off + 3] = Vertex {
-            pos: [x - 0.5, y - 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [0., 0.],
-        };
-        self.vertices_off += 4;
+        self.draw_texture_region(x, y, color, uv);
     }
 
     pub(crate) fn draw_texture_region(&mut self, x: f32, y: f32, color: Color, uv: Rect) {

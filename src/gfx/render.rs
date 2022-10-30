@@ -5,7 +5,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use std::mem;
+use std::{mem, sync::Arc};
 
 use super::{MAX_INDEXES_COUNT, MAX_QUAD_COUNT, MAX_VERTEX_COUNT};
 use crate::gfx::Vertex;
@@ -16,7 +16,11 @@ use winit::window::Window;
 
 use crate::{
     error::ErrorKind,
-    gfx::{batch_context::BatchContext, texture_atlas::TextureAtlas},
+    gfx::{
+        batch_context::BatchContext,
+        texture_atlas::TextureAtlas,
+        types::{Shader, ShaderType},
+    },
 };
 
 use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline, texture::Texture2D};
@@ -151,15 +155,15 @@ impl InnerRenderContext {
         }
     }
 
-    pub fn device(&self) -> &wgpu::Device {
+    pub(crate) fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
-    pub fn queue(&self) -> &wgpu::Queue {
+    pub(crate) fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
-    pub fn supported_formats(&self) -> &[TextureFormat] {
+    pub(crate) fn supported_formats(&self) -> &[TextureFormat] {
         &self.supported_formats
     }
 
@@ -178,6 +182,11 @@ impl InnerRenderContext {
             label: None,
             source,
         })
+    }
+
+    /// Creates a new shader from the specified source.
+    pub fn create_shader_from_src(&self, ty: ShaderType, src: &str) -> Shader {
+        Shader::new(Self::create_shader(&self.device, ty.into(), src))
     }
 
     pub fn draw_batch<B>(&mut self, batch_context: B)
