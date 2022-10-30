@@ -13,10 +13,10 @@ use crate::{error::ErrorKind, gfx::texture_atlas::TextureAtlas};
 
 use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline, texture::Texture2D};
 
-/// The [`GraphicsContext`] allows interactions with the GPU.
-pub struct GraphicsContext(InnerRenderContext);
+/// The [`RenderContext`] allows interactions with the GPU.
+pub struct RenderContext(InnerRenderContext);
 
-impl Deref for GraphicsContext {
+impl Deref for RenderContext {
     type Target = InnerRenderContext;
 
     fn deref(&self) -> &Self::Target {
@@ -24,14 +24,14 @@ impl Deref for GraphicsContext {
     }
 }
 
-impl DerefMut for GraphicsContext {
+impl DerefMut for RenderContext {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl GraphicsContext {
-    pub async fn from_window(window: &Window) -> Self {
+impl RenderContext {
+    pub async fn new(window: &Window) -> Self {
         let inner_context = InnerRenderContext::from_window(window).await;
         Self(inner_context)
     }

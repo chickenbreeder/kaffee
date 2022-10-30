@@ -9,4 +9,4 @@ mod pipeline;
 mod texture;
 mod texture_atlas;
 
-pub use context::GraphicsContext;
+pub use context::RenderContext;

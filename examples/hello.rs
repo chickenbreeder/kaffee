@@ -1,13 +1,11 @@
-use kaffee::prelude::*;
+use kaffee::{gfx::context::RenderContext, prelude::*};
 
 struct GameState {}
 
 impl EventHandler for GameState {
-    fn init(&mut self, ctx: &mut GraphicsContext) {}
-
     fn update(&mut self, dt: f32) {}
 
-    fn redraw(&mut self, ctx: &mut GraphicsContext) {
+    fn redraw(&mut self, ctx: &mut RenderContext) {
         ctx.draw_quad(0.5, 0.5, RED);
         ctx.draw_quad(1.5, 1.5, GREEN);
         ctx.draw_quad(2.5, 2.5, BLUE);
