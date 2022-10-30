@@ -1,4 +1,4 @@
-//! Types responsible for interacting with the GPU.
+//! Contains types which are used for performing draw operations (see: [`RenderContext`]).
 
 use std::{
     borrow::Cow,
@@ -25,7 +25,9 @@ use crate::{
 
 use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline, texture::Texture2D};
 
-/// The [`RenderContext`] allows interactions with the GPU.
+/// The [`RenderContext`] enables draw operations.
+/// An instance of it is passed to the implementation of
+/// [`EventHandler`](crate::event::EventHandler) and therefore does not have to be created manually.
 pub struct RenderContext(InnerRenderContext);
 
 impl Deref for RenderContext {
@@ -43,7 +45,7 @@ impl DerefMut for RenderContext {
 }
 
 impl RenderContext {
-    pub async fn new(window: &Window) -> Self {
+    pub(crate) async fn new(window: &Window) -> Self {
         let inner_context = InnerRenderContext::from_window(window).await;
         Self(inner_context)
     }
@@ -189,6 +191,20 @@ impl InnerRenderContext {
         Shader::new(Self::create_shader(&self.device, ty.into(), src))
     }
 
+    /// Starts a render batch.
+    /// An instance of the default [`BatchContext`] is passed to the closure.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kaffee::prelude::*;
+    ///
+    /// // ...
+    ///
+    /// r.draw_batch(|b| {
+    ///     b.draw_quad(0.5, 0.5, RED);
+    /// });
+    /// ```
     pub fn draw_batch<B>(&mut self, batch_context: B)
     where
         B: Fn(&mut BatchContext),
@@ -237,12 +253,5 @@ impl InnerRenderContext {
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
-    }
-
-    pub fn load_texture<P>(&self, path: P) -> Result<Texture2D, ErrorKind>
-    where
-        P: AsRef<std::path::Path>,
-    {
-        Texture2D::from_path(path, &self.device, &self.queue)
     }
 }

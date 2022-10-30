@@ -29,6 +29,13 @@ fn main() {
 }
 ```
 
+## Goals
+
+* Good documentation and examples
+* Provide an easy to use API
+* Support a wide range of platforms
+* Decent performance
+
 ## License
 
 Apache License, Version 2.0

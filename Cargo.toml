@@ -1,6 +1,6 @@
 [package]
 name = "kaffee"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 edition = "2021"
 description = "Small 2D framework"
 license = "Apache-2.0"

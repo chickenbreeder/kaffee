@@ -30,8 +30,9 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::gfx::RenderContext;
+use crate::{event::EventHandler, gfx::RenderContext};
 
+/// Specifies the settings with which an application will be created.
 #[derive(Debug, Clone)]
 pub struct Settings {
     pub(crate) title: String,
@@ -51,12 +52,8 @@ impl Default for Settings {
     }
 }
 
+/// A `kaffee` application.
 pub struct App;
-
-pub trait EventHandler {
-    fn update(&mut self, dt: f32);
-    fn redraw(&mut self, r: &mut RenderContext);
-}
 
 impl App {
     /// The entry point for every application built with `kaffee`.
