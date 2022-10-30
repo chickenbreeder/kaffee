@@ -22,14 +22,11 @@ pub struct BatchPipeline {
     camera_buffer: MutableBuffer<Camera2D>,
     camera_bind_group: wgpu::BindGroup,
     diffuse_bind_group: wgpu::BindGroup,
-    vertices: Vec<Vertex>,
-    vertices_off: usize,
 }
 
 impl BatchPipeline {
     pub(crate) fn new(
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
         supported_formats: &[TextureFormat],
         vertex_shader: ShaderModule,
         fragment_shader: ShaderModule,
@@ -159,11 +156,6 @@ impl BatchPipeline {
             multiview: None,
         });
 
-        let mut vertices = Vec::with_capacity(MAX_VERTEX_COUNT as usize);
-        unsafe {
-            vertices.set_len(MAX_VERTEX_COUNT as usize);
-        }
-
         Self {
             render_pipeline,
             vertex_buffer,
@@ -171,14 +163,11 @@ impl BatchPipeline {
             camera_buffer,
             camera_bind_group,
             diffuse_bind_group,
-            vertices,
-            vertices_off: 0,
         }
     }
 
     pub fn flush(&mut self, queue: &wgpu::Queue, batch_context: &BatchContext) {
         self.vertex_buffer.upload(queue, batch_context.vertices());
-        self.vertices_off = 0;
     }
 
     pub(crate) fn render_pipeline(&self) -> &wgpu::RenderPipeline {
@@ -199,53 +188,5 @@ impl BatchPipeline {
 
     pub(crate) fn diffuse_bind_group(&self) -> &wgpu::BindGroup {
         &&self.diffuse_bind_group
-    }
-
-    pub(crate) fn push_quad(&mut self, x: f32, y: f32, color: Color) {
-        self.vertices[self.vertices_off] = Vertex {
-            pos: [x - 0.5, y + 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [0., 1.],
-        };
-        self.vertices[self.vertices_off + 1] = Vertex {
-            pos: [x + 0.5, y + 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [1., 1.],
-        };
-        self.vertices[self.vertices_off + 2] = Vertex {
-            pos: [x + 0.5, y - 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [1., 0.],
-        };
-        self.vertices[self.vertices_off + 3] = Vertex {
-            pos: [x - 0.5, y - 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [0., 0.],
-        };
-        self.vertices_off += 4;
-    }
-
-    pub(crate) fn push_textured_quad(&mut self, x: f32, y: f32, color: Color, uv: Rect) {
-        self.vertices[self.vertices_off] = Vertex {
-            pos: [x - 0.5, y + 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [uv.min.x, uv.max.y],
-        };
-        self.vertices[self.vertices_off + 1] = Vertex {
-            pos: [x + 0.5, y + 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [uv.max.x, uv.max.y],
-        };
-        self.vertices[self.vertices_off + 2] = Vertex {
-            pos: [x + 0.5, y - 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [uv.max.x, uv.min.y],
-        };
-        self.vertices[self.vertices_off + 3] = Vertex {
-            pos: [x - 0.5, y - 0.5, 0.0],
-            color: color.into(),
-            tex_coords: [uv.min.x, uv.min.y],
-        };
-        self.vertices_off += 4;
     }
 }

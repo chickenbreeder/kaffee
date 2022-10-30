@@ -7,21 +7,18 @@ This is an attempt at designing a simple 2D graphics API on top of [wgpu](https:
 ```rust
 use kaffee::prelude::*;
 
-struct GameState {}
+struct GameState;
 
 impl EventHandler for GameState {
-    fn init(&mut self, ctx: &mut GraphicsContext) {}
-
     fn update(&mut self, dt: f32) {}
 
-    fn redraw(&mut self, ctx: &mut GraphicsContext) {
-        ctx.draw_quad(0.5, 0.5, RED);
-        ctx.draw_quad(1.5, 1.5, GREEN);
-        ctx.draw_quad(2.5, 2.5, BLUE);
-        ctx.draw_quad(3.5, 3.5, YELLOW);
-        ctx.draw_quad(4.5, 4.5, PINK);
-        ctx.draw_quad(5.5, 5.5, WHITE);
-        ctx.end_frame();
+    fn redraw(&mut self, r: &mut RenderContext) {
+        r.draw_batch(|b| {
+            b.draw_quad(0.5, 0.5, RED);
+            b.draw_quad(6.5, 6.5, GREEN);
+            b.draw_quad(8.5, 8.5, BLUE);
+        });
+        r.end_frame();
     }
 }
 

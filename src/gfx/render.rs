@@ -127,7 +127,6 @@ impl InnerRenderContext {
 
         let batch_pipeline = BatchPipeline::new(
             &device,
-            &queue,
             &supported_formats,
             vertex_shader,
             fragment_shader,

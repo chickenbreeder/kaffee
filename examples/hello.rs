@@ -1,4 +1,4 @@
-use kaffee::{gfx::render::RenderContext, prelude::*};
+use kaffee::prelude::*;
 
 struct GameState;
 
