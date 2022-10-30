@@ -5,11 +5,19 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use std::mem;
+
+use super::{MAX_INDEXES_COUNT, MAX_QUAD_COUNT, MAX_VERTEX_COUNT};
+use crate::gfx::Vertex;
+
 use glam::vec2;
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use crate::{error::ErrorKind, gfx::texture_atlas::TextureAtlas};
+use crate::{
+    error::ErrorKind,
+    gfx::{batch_context::BatchContext, texture_atlas::TextureAtlas},
+};
 
 use super::{camera::Camera2D, color::Color, pipeline::BatchPipeline, texture::Texture2D};
 
@@ -46,6 +54,7 @@ pub struct InnerRenderContext {
     batch_pipeline: BatchPipeline,
     camera: Camera2D,
     texture_atlas: TextureAtlas,
+    default_batch_context: BatchContext,
 }
 
 impl InnerRenderContext {
@@ -126,6 +135,9 @@ impl InnerRenderContext {
             &texture_atlas,
         );
 
+        let default_batch_context =
+            BatchContext::with_capacity(mem::size_of::<Vertex>() * MAX_VERTEX_COUNT as usize);
+
         Self {
             instance,
             device,
@@ -135,6 +147,7 @@ impl InnerRenderContext {
             batch_pipeline,
             camera,
             texture_atlas,
+            default_batch_context,
         }
     }
 
@@ -167,17 +180,17 @@ impl InnerRenderContext {
         })
     }
 
-    pub fn draw_quad(&mut self, x: f32, y: f32, color: Color) {
-        self.batch_pipeline.push_quad(x, y, color);
-    }
-
-    pub fn draw_atlas_index(&mut self, x: f32, y: f32, color: Color, index: u16) {
-        let region = self.texture_atlas.get_region(index);
-        self.batch_pipeline.push_textured_quad(x, y, color, region);
+    pub fn draw_batch<B>(&mut self, batch_context: B)
+    where
+        B: Fn(&mut BatchContext),
+    {
+        batch_context(&mut self.default_batch_context);
+        self.default_batch_context.reset();
     }
 
     pub fn end_frame(&mut self) {
-        self.batch_pipeline.flush(&self.queue);
+        self.batch_pipeline
+            .flush(&self.queue, &self.default_batch_context);
 
         let output = self.surface.get_current_texture().unwrap();
         let view = output

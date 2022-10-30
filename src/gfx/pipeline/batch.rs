@@ -4,26 +4,16 @@ use wgpu::{RenderPipeline, ShaderModule, TextureFormat};
 
 use crate::{
     gfx::{
+        batch_context::BatchContext,
         buffer::{ImmutableBuffer, MutableBuffer},
         camera::Camera2D,
         color::Color,
         texture::Texture2D,
         texture_atlas::TextureAtlas,
+        Vertex, MAX_INDEXES_COUNT, MAX_QUAD_COUNT, MAX_VERTEX_COUNT,
     },
     math::Rect,
 };
-
-const MAX_QUAD_COUNT: u64 = 200;
-const MAX_VERTEX_COUNT: u64 = MAX_QUAD_COUNT * 4;
-const MAX_INDEXES_COUNT: u64 = MAX_QUAD_COUNT * 6;
-
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
-pub(crate) struct Vertex {
-    pub(crate) pos: [f32; 3],
-    pub(crate) color: [f32; 3],
-    pub(crate) tex_coords: [f32; 2],
-}
 
 pub struct BatchPipeline {
     render_pipeline: RenderPipeline,
@@ -186,8 +176,8 @@ impl BatchPipeline {
         }
     }
 
-    pub fn flush(&mut self, queue: &wgpu::Queue) {
-        self.vertex_buffer.upload(queue, &self.vertices);
+    pub fn flush(&mut self, queue: &wgpu::Queue, batch_context: &BatchContext) {
+        self.vertex_buffer.upload(queue, batch_context.vertices());
         self.vertices_off = 0;
     }
 
