@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use image::GenericImageView;
+use image::{GenericImageView, ImageBuffer, RgbaImage};
 
 use crate::{error::ErrorKind, fs};
 
@@ -22,7 +22,9 @@ impl Texture2D {
         P: AsRef<Path>,
     {
         let bytes = fs::load_file(path)?;
-        Texture2D::from_bytes(device, queue, &bytes)
+        let dyn_img = image::load_from_memory(&bytes)?;
+        let rgba_image: RgbaImage = dyn_img.to_rgba8();
+        Texture2D::new(device, queue, &rgba_image)
     }
 
     pub(crate) fn from_bytes(
@@ -30,8 +32,12 @@ impl Texture2D {
         queue: &wgpu::Queue,
         bytes: &[u8],
     ) -> Result<Self, ErrorKind> {
-        let img = image::load_from_memory(bytes)?;
-        let diffuse_rgba = img.to_rgba8();
+        let data: Vec<u8> = vec![255, 255, 255, 255];
+        let rgba_image: RgbaImage = RgbaImage::from_raw(1, 1, data).expect("Failed to cr");
+        Texture2D::new(device, queue, &rgba_image)
+    }
+
+    fn new(device: &wgpu::Device, queue: &wgpu::Queue, img: &RgbaImage) -> Result<Self, ErrorKind> {
         let dim = img.dimensions();
         let width = dim.0;
         let height = dim.1;
@@ -59,7 +65,7 @@ impl Texture2D {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &diffuse_rgba,
+            &img,
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: std::num::NonZeroU32::new(4 * dim.0),
@@ -88,11 +94,11 @@ impl Texture2D {
         })
     }
 
-    pub(crate) fn width(&self) -> u32 {
+    pub fn width(&self) -> u32 {
         self.width
     }
 
-    pub(crate) fn height(&self) -> u32 {
+    pub fn height(&self) -> u32 {
         self.height
     }
 

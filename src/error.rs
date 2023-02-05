@@ -2,6 +2,12 @@
 pub enum ErrorKind {
     IoError,
     ImageError,
+    Gfx(GfxErrorKind),
+}
+
+#[derive(Debug)]
+pub enum GfxErrorKind {
+    SurfaceCreationFailed,
 }
 
 impl From<std::io::Error> for ErrorKind {

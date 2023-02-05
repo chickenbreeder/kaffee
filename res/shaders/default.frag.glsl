@@ -7,5 +7,5 @@ layout(set = 1, binding = 1) uniform sampler s_diffuse;
 out vec4 color;
 
 void main() {
-    color = v_Color * texture(sampler2D(t_diffuse, s_diffuse), v_TexCoords);
+    color = texture(sampler2D(t_diffuse, s_diffuse), v_TexCoords) * v_Color;
 }

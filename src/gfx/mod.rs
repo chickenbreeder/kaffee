@@ -1,16 +1,17 @@
 //! Graphics-related code
 
-pub mod batch_context;
 pub mod buffer;
 pub mod camera;
 pub mod color;
 pub mod render;
 pub mod types;
 
+mod batch;
 mod pipeline;
 mod texture;
 mod texture_atlas;
 
+pub use batch::BatchContext;
 pub use render::RenderContext;
 
 const MAX_QUAD_COUNT: u64 = 200;

@@ -4,6 +4,9 @@ use crate::gfx::RenderContext;
 
 /// This type allows interactions with the event loop.
 pub trait EventHandler {
+    fn init(&mut self, r: &mut RenderContext);
+
     fn update(&mut self, dt: f32);
+
     fn redraw(&mut self, r: &mut RenderContext);
 }

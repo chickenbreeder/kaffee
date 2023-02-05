@@ -4,12 +4,11 @@ use wgpu::{RenderPipeline, ShaderModule, TextureFormat};
 
 use crate::{
     gfx::{
-        batch_context::BatchContext,
+        batch::BatchContext,
         buffer::{ImmutableBuffer, MutableBuffer},
         camera::Camera2D,
         color::Color,
         texture::Texture2D,
-        texture_atlas::TextureAtlas,
         Vertex, MAX_INDEXES_COUNT, MAX_QUAD_COUNT, MAX_VERTEX_COUNT,
     },
     math::Rect,
@@ -21,7 +20,6 @@ pub(crate) struct BatchPipeline {
     index_buffer: ImmutableBuffer<u16>,
     camera_buffer: MutableBuffer<Camera2D>,
     camera_bind_group: wgpu::BindGroup,
-    diffuse_bind_group: wgpu::BindGroup,
 }
 
 impl BatchPipeline {
@@ -31,7 +29,7 @@ impl BatchPipeline {
         vertex_shader: ShaderModule,
         fragment_shader: ShaderModule,
         camera: &Camera2D,
-        texture_atlas: &TextureAtlas,
+        diffuse_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> Self {
         let vertex_buffer: MutableBuffer<Vertex> =
             MutableBuffer::with_capacity(device, wgpu::BufferUsages::VERTEX, MAX_VERTEX_COUNT);
@@ -68,29 +66,6 @@ impl BatchPipeline {
                 }],
             });
 
-        let diffuse_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                ],
-                label: None,
-            });
-
         let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &&camera_bind_group_layout,
@@ -98,21 +73,6 @@ impl BatchPipeline {
                 binding: 0,
                 resource: camera_buffer.handle().as_entire_binding(),
             }],
-        });
-
-        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &diffuse_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(texture_atlas.texture().view()),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(texture_atlas.texture().sampler()),
-                },
-            ],
-            label: None,
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -162,7 +122,6 @@ impl BatchPipeline {
             index_buffer,
             camera_buffer,
             camera_bind_group,
-            diffuse_bind_group,
         }
     }
 
@@ -184,9 +143,5 @@ impl BatchPipeline {
 
     pub(crate) fn camera_bind_group(&self) -> &wgpu::BindGroup {
         &self.camera_bind_group
-    }
-
-    pub(crate) fn diffuse_bind_group(&self) -> &wgpu::BindGroup {
-        &&self.diffuse_bind_group
     }
 }

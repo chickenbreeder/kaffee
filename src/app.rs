@@ -10,6 +10,7 @@
 //! struct GameState;
 //!
 //! impl EventHandler for GameState {
+//!     fn init(&mut self, r: &mut RenderContext) {}
 //!     fn update(&mut self, dt: f32) {}
 //!     fn redraw(&mut self, r: &mut RenderContext) {}
 //! }
@@ -35,10 +36,10 @@ use crate::{event::EventHandler, gfx::RenderContext};
 /// Specifies the settings with which an application will be created.
 #[derive(Debug, Clone)]
 pub struct Settings {
-    pub(crate) title: String,
-    pub(crate) width: u16,
-    pub(crate) height: u16,
-    pub(crate) resizable: bool,
+    pub title: String,
+    pub width: u16,
+    pub height: u16,
+    pub resizable: bool,
 }
 
 impl Default for Settings {
@@ -71,7 +72,11 @@ impl App {
             .build(&event_loop)
             .expect("Failed to create window with given settings");
 
-        let mut render_context = RenderContext::new(&window).await;
+        let mut render_context = RenderContext::new(&window)
+            .await
+            .expect("Failed to initialize render context");
+
+        event_handler.init(&mut render_context);
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;

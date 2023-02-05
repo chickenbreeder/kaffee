@@ -29,7 +29,9 @@ pub mod colors {
 
     use super::Color;
 
+    pub const BLACK: Color = Color::new(0., 0., 0., 1.);
     pub const WHITE: Color = Color::new(1., 1., 1., 1.);
+
     pub const RED: Color = Color::new(1., 0., 0., 1.);
     pub const GREEN: Color = Color::new(0., 1., 0., 1.);
     pub const BLUE: Color = Color::new(0., 0., 1., 1.);

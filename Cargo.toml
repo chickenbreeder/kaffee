@@ -1,6 +1,6 @@
 [package]
 name = "kaffee"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Small 2D framework"
 license = "Apache-2.0"
@@ -12,7 +12,7 @@ exclude = [
 ]
 
 [dependencies]
-winit = "0.27.5"
+winit = "0.28.1"
 wgpu = { version = "0.14", features = ["glsl"] }
 naga = "0.10"
 bytemuck = { version = "1.12.2", features = ["derive"] }

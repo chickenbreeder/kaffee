@@ -17,8 +17,7 @@ use winit::window::Window;
 use crate::{
     error::ErrorKind,
     gfx::{
-        batch_context::BatchContext,
-        texture_atlas::TextureAtlas,
+        batch::BatchContext,
         types::{Shader, ShaderType},
     },
 };
@@ -45,9 +44,9 @@ impl DerefMut for RenderContext {
 }
 
 impl RenderContext {
-    pub(crate) async fn new(window: &Window) -> Self {
-        let inner_context = InnerRenderContext::from_window(window).await;
-        Self(inner_context)
+    pub(crate) async fn new(window: &Window) -> Result<Self, ErrorKind> {
+        let inner_context = InnerRenderContext::from_window(window).await?;
+        Ok(Self(inner_context))
     }
 }
 
@@ -59,12 +58,12 @@ pub struct InnerRenderContext {
     supported_formats: Vec<TextureFormat>,
     batch_pipeline: BatchPipeline,
     camera: Camera2D,
-    texture_atlas: TextureAtlas,
     default_batch_context: BatchContext,
+    diffuse_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl InnerRenderContext {
-    async fn from_window(window: &Window) -> Self {
+    async fn from_window(window: &Window) -> Result<Self, ErrorKind> {
         let width = window.inner_size().width;
         let height = window.inner_size().height;
         let scale_factor = window.scale_factor() as f32;
@@ -122,15 +121,39 @@ impl InnerRenderContext {
         );
 
         let camera = Camera2D::new(logical_width, logical_height, 0., 0.);
-        let texture_atlas = TextureAtlas::from_path(
-            "./res/textures/atlas.png",
+
+        let diffuse_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: None,
+            });
+
+        let default_texture =
+            Texture2D::from_bytes(&device, &queue, &[255, 255, 255, 255]).unwrap();
+
+        let default_batch_context = BatchContext::new(
+            mem::size_of::<Vertex>() * MAX_VERTEX_COUNT as usize,
+            default_texture,
             &device,
-            &queue,
-            2,
-            2,
-            vec2(16., 16.),
-        )
-        .unwrap();
+            &diffuse_bind_group_layout,
+        );
 
         let batch_pipeline = BatchPipeline::new(
             &device,
@@ -138,13 +161,10 @@ impl InnerRenderContext {
             vertex_shader,
             fragment_shader,
             &camera,
-            &texture_atlas,
+            &diffuse_bind_group_layout,
         );
 
-        let default_batch_context =
-            BatchContext::with_capacity(mem::size_of::<Vertex>() * MAX_VERTEX_COUNT as usize);
-
-        Self {
+        Ok(Self {
             instance,
             device,
             queue,
@@ -152,9 +172,9 @@ impl InnerRenderContext {
             supported_formats,
             batch_pipeline,
             camera,
-            texture_atlas,
             default_batch_context,
-        }
+            diffuse_bind_group_layout,
+        })
     }
 
     pub(crate) fn device(&self) -> &wgpu::Device {
@@ -186,6 +206,19 @@ impl InnerRenderContext {
         })
     }
 
+    pub fn create_batch(&self, texture: Texture2D) -> BatchContext {
+        BatchContext::new(
+            mem::size_of::<Vertex>() * MAX_VERTEX_COUNT as usize,
+            texture,
+            &self.device,
+            &self.diffuse_bind_group_layout,
+        )
+    }
+
+    pub fn load_texture<P: AsRef<std::path::Path>>(&self, path: P) -> Result<Texture2D, ErrorKind> {
+        Texture2D::from_path(path, &self.device, &self.queue)
+    }
+
     /// Creates a new shader from the specified source.
     pub fn create_shader_from_src(&self, ty: ShaderType, src: &str) -> Shader {
         Shader::new(Self::create_shader(&self.device, ty.into(), src))
@@ -202,7 +235,7 @@ impl InnerRenderContext {
     /// // ...
     ///
     /// r.draw_batch(|b| {
-    ///     b.draw_quad(0.5, 0.5, RED);
+    ///     b.draw_rect(20., 20.,  50., 50., RED);
     /// });
     /// ```
     pub fn draw_batch<B>(&mut self, batch_context: B)
@@ -211,12 +244,24 @@ impl InnerRenderContext {
     {
         batch_context(&mut self.default_batch_context);
         self.default_batch_context.reset();
-    }
 
-    pub fn end_frame(&mut self) {
         self.batch_pipeline
             .flush(&self.queue, &self.default_batch_context);
+        self.flush(self.default_batch_context.bind_group());
+    }
 
+    pub fn draw_batch_ex<B>(&mut self, ctx: &mut BatchContext, batch_context: B)
+    where
+        B: Fn(&mut BatchContext),
+    {
+        batch_context(ctx);
+        ctx.reset();
+
+        self.batch_pipeline.flush(&self.queue, ctx);
+        self.flush(ctx.bind_group());
+    }
+
+    fn flush(&self, diffuse_bind_group: &wgpu::BindGroup) {
         let output = self.surface.get_current_texture().unwrap();
         let view = output
             .texture
@@ -242,7 +287,7 @@ impl InnerRenderContext {
 
             rpass.set_pipeline(&self.batch_pipeline.render_pipeline());
             rpass.set_bind_group(0, self.batch_pipeline.camera_bind_group(), &[]);
-            rpass.set_bind_group(1, self.batch_pipeline.diffuse_bind_group(), &[]);
+            rpass.set_bind_group(1, diffuse_bind_group, &[]);
             rpass.set_vertex_buffer(0, self.batch_pipeline.vertex_buffer().handle().slice(..));
             rpass.set_index_buffer(
                 self.batch_pipeline.index_buffer().handle().slice(..),
