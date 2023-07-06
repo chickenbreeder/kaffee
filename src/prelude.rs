@@ -1,7 +1,8 @@
 //! Re-exports the most common types.
 
 pub use crate::{
-    app::{App, Settings},
+    app::App,
+    config::Config,
     event::EventHandler,
-    gfx::{color::colors::*, BatchContext, RenderContext},
+    gfx::{BatchExt, Color, GfxContext, PipelineExt, TextureExt},
 };

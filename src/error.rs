@@ -15,9 +15,3 @@ impl From<std::io::Error> for ErrorKind {
         Self::IoError
     }
 }
-
-impl From<image::ImageError> for ErrorKind {
-    fn from(_: image::ImageError) -> Self {
-        Self::ImageError
-    }
-}

@@ -6,8 +6,9 @@
 pub mod app;
 pub mod error;
 pub mod event;
-pub mod gfx;
 pub mod prelude;
 
+mod config;
 mod fs;
+mod gfx;
 mod math;

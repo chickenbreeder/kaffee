@@ -1,6 +1,7 @@
 # kaffee
 
 [![Docs](https://docs.rs/kaffee/badge.svg)](https://docs.rs/kaffee/latest)
+[![crates.io](https://img.shields.io/crates/v/kaffee.svg)](https://crates.io/crates/kaffee)
 
 This is an attempt at designing a simple 2D graphics API on top of [wgpu](https://github.com/gfx-rs/wgpu), inspired by [macroquad](https://github.com/not-fl3/macroquad). You should probably not use this (yet).
 
@@ -12,21 +13,20 @@ use kaffee::prelude::*;
 struct GameState;
 
 impl EventHandler for GameState {
-    fn init(&mut self, r: &mut RenderContext) {}
+    fn init(&mut self, _: &mut GfxContext) {}
 
-    fn update(&mut self, dt: f32) {}
+    fn input(&mut self) {}
 
-    fn redraw(&mut self, r: &mut RenderContext) {
-        r.draw_batch(|b| {
-            b.draw_rect(50., 50., 300., 300., GREEN);
-            b.draw_rect(150., 150., 300., 300., RED);
-            b.draw_rect(250., 250., 300., 300., WHITE);
-        });
+    fn update(&mut self, _: f32) {}
+
+    fn redraw(&mut self, g: &mut GfxContext) {
+        g.clear_color(Color::BLACK);
+        g.draw_quad(-0.5, -0.5, 1., Color::RED);
     }
 }
 
 fn main() {
-    pollster::block_on(App::run(&Settings::default(), GameState {}))
+    pollster::block_on(App::new(GameState {})).run();
 }
 ```
 

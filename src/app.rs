@@ -10,16 +10,14 @@
 //! struct GameState;
 //!
 //! impl EventHandler for GameState {
-//!     fn init(&mut self, r: &mut RenderContext) {}
+//!     fn init(&mut self, g: &mut GfxContext) {}
+//!     fn input(&mut self) {}
 //!     fn update(&mut self, dt: f32) {}
-//!     fn redraw(&mut self, r: &mut RenderContext) {}
+//!     fn redraw(&mut self, g: &mut GfxContext) {}
 //! }
 //!
 //! fn main() {
-//!     pollster::block_on(App::run(
-//!         &Settings::default(),
-//!         GameState {}
-//!     ))
+//!     pollster::block_on(App::new(GameState {})).run();
 //! }
 //! ```
 //!
@@ -28,57 +26,48 @@ use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{Window, WindowBuilder},
 };
 
-use crate::{event::EventHandler, gfx::RenderContext};
-
-/// Specifies the settings with which an application will be created.
-#[derive(Debug, Clone)]
-pub struct Settings {
-    pub title: String,
-    pub width: u16,
-    pub height: u16,
-    pub resizable: bool,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            title: "kaffee".into(),
-            width: 1024,
-            height: 768,
-            resizable: false,
-        }
-    }
-}
+use crate::{config::Config, event::EventHandler, gfx::GfxContext, prelude::BatchExt};
 
 /// A `kaffee` application.
-pub struct App;
+pub struct App<H: 'static + EventHandler> {
+    window: Window,
+    event_loop: EventLoop<()>,
+    event_handler: H,
+    gfx_ctx: GfxContext,
+}
 
-impl App {
-    /// The entry point for every application built with `kaffee`.
-    pub async fn run<H>(settings: &Settings, mut event_handler: H) -> !
-    where
-        H: 'static + EventHandler,
-    {
-        env_logger::init();
+impl<H: 'static + EventHandler> App<H> {
+    pub async fn new(event_handler: H) -> Self {
+        Self::with_config(event_handler, &Config::default()).await
+    }
+
+    pub async fn with_config(event_handler: H, config: &Config) -> Self {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new()
-            .with_title(&settings.title)
-            .with_inner_size(LogicalSize::new(settings.width, settings.height))
-            .with_resizable(settings.resizable)
+            .with_title(&config.title)
+            .with_inner_size(LogicalSize::new(config.width, config.height))
+            .with_resizable(config.resizable)
             .build(&event_loop)
             .expect("Failed to create window with given settings");
 
-        let mut render_context = RenderContext::new(&window)
-            .await
-            .expect("Failed to initialize render context");
+        let gfx_ctx = GfxContext::new(&window, config).await;
 
-        event_handler.init(&mut render_context);
+        Self {
+            window,
+            event_loop,
+            event_handler,
+            gfx_ctx,
+        }
+    }
 
-        event_loop.run(move |event, _, control_flow| {
+    pub fn run(mut self) -> ! {
+        self.event_handler.init(&mut self.gfx_ctx);
+
+        self.event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
 
             match event {
@@ -86,8 +75,9 @@ impl App {
                     return;
                 }
                 Event::RedrawRequested(_) => {
-                    event_handler.update(1.);
-                    event_handler.redraw(&mut render_context);
+                    self.event_handler.update(1.);
+                    self.event_handler.redraw(&mut self.gfx_ctx);
+                    self.gfx_ctx.end_frame();
                 }
                 Event::WindowEvent { ref event, .. } => match event {
                     WindowEvent::CloseRequested => {

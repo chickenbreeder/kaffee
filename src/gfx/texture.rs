@@ -1,10 +1,10 @@
 use std::path::Path;
 
-use image::{GenericImageView, ImageBuffer, RgbaImage};
+use image::RgbaImage;
 
 use crate::{error::ErrorKind, fs};
 
-pub struct Texture2D {
+pub struct Texture {
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
     pub(crate) sampler: wgpu::Sampler,
@@ -12,7 +12,7 @@ pub struct Texture2D {
     height: u32,
 }
 
-impl Texture2D {
+impl Texture {
     pub(crate) fn from_path<P>(
         path: P,
         device: &wgpu::Device,
@@ -21,10 +21,11 @@ impl Texture2D {
     where
         P: AsRef<Path>,
     {
-        let bytes = fs::load_file(path)?;
-        let dyn_img = image::load_from_memory(&bytes)?;
+        let bytes = fs::load_file(path).expect("Failed to load texture");
+        let dyn_img = image::load_from_memory(&bytes).expect("Failed to create image");
         let rgba_image: RgbaImage = dyn_img.to_rgba8();
-        Texture2D::new(device, queue, &rgba_image)
+
+        Self::new(device, queue, &rgba_image)
     }
 
     pub(crate) fn from_bytes(
@@ -34,7 +35,8 @@ impl Texture2D {
     ) -> Result<Self, ErrorKind> {
         let data: Vec<u8> = vec![255, 255, 255, 255];
         let rgba_image: RgbaImage = RgbaImage::from_raw(1, 1, data).expect("Failed to cr");
-        Texture2D::new(device, queue, &rgba_image)
+
+        Self::new(device, queue, &rgba_image)
     }
 
     fn new(device: &wgpu::Device, queue: &wgpu::Queue, img: &RgbaImage) -> Result<Self, ErrorKind> {
@@ -56,6 +58,7 @@ impl Texture2D {
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
         });
 
         queue.write_texture(
@@ -68,13 +71,14 @@ impl Texture2D {
             &img,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4 * dim.0),
-                rows_per_image: std::num::NonZeroU32::new(dim.1),
+                bytes_per_row: Some(4 * dim.0),
+                rows_per_image: Some(dim.1),
             },
             texture_size,
         );
 
         let texture_view = diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
         let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,

@@ -1,6 +1,6 @@
 [package]
 name = "kaffee"
-version = "0.2.0"
+version = "0.3.0-rc.1"
 edition = "2021"
 description = "Small 2D framework"
 license = "Apache-2.0"
@@ -12,14 +12,14 @@ exclude = [
 ]
 
 [dependencies]
-winit = "0.28.1"
-wgpu = { version = "0.14", features = ["glsl"] }
-naga = "0.10"
-bytemuck = { version = "1.12.2", features = ["derive"] }
-glam = { version = "0.22", features = ["bytemuck"] }
+winit = "0.28.6"
+wgpu = { version = "0.16.1", features = ["glsl"] }
+naga = "0.12.2"
+bytemuck = { version = "1.13.1", features = ["derive"] }
+glam = { version = "0.24", features = ["bytemuck"] }
 log = "0.4"
-env_logger = "0.9"
-image = "0.24"
+env_logger = "0.10"
+image = { version = "0.24", default-features = false, features = ["png"] }
 
 [dev-dependencies]
-pollster = "0.2.5"
+pollster = "0.3.0"

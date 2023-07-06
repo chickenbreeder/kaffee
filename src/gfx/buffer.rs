@@ -1,31 +1,19 @@
 use std::{mem, ops::Deref};
 
+use bytemuck::Pod;
 use wgpu::util::DeviceExt;
 
-/// An [`ImmutableBuffer`] should be used for read-only data.
-pub struct ImmutableBuffer<T> {
+use super::types::BufferUsages;
+
+pub struct Buffer<T: Pod> {
     buffer: wgpu::Buffer,
     cap: u64,
     len: u64,
     data: std::marker::PhantomData<T>,
 }
 
-impl<T: bytemuck::Pod> ImmutableBuffer<T> {
-    /// Creates a new instance of [`ImmutableBuffer`] with the given usage flags.
-    /// An example might look like this:
-    /// ```rust
-    /// #[repr(C)]
-    /// #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
-    /// pub(crate) struct Vertex {
-    ///     pub(crate) pos: [f32; 3],
-    /// }
-    ///
-    /// fn foo() {
-    ///     let vertices: Vec<Vertex> = vec![];
-    ///     ImmutableBuffer::from_data(&device, wgpu::BufferUsages::VERTEX, &vertices);
-    /// }
-    /// ```
-    pub fn from_data(device: &wgpu::Device, usage: wgpu::BufferUsages, data: &[T]) -> Self {
+impl<T: Pod> Buffer<T> {
+    pub(super) fn from_data(device: &wgpu::Device, usage: BufferUsages, data: &[T]) -> Self {
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
             contents: bytemuck::cast_slice(data),
@@ -56,39 +44,31 @@ impl<T: bytemuck::Pod> ImmutableBuffer<T> {
 }
 
 /// The data of a [`MutableBuffer`] can be updated dynamically.
-pub struct MutableBuffer<T>(ImmutableBuffer<T>);
+pub struct MutableBuffer<T: Pod>(Buffer<T>);
 
-impl<T: bytemuck::Pod> Deref for MutableBuffer<T> {
-    type Target = ImmutableBuffer<T>;
+impl<T: Pod> Deref for MutableBuffer<T> {
+    type Target = Buffer<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T: bytemuck::Pod> MutableBuffer<T> {
-    pub fn with_capacity(device: &wgpu::Device, usage: wgpu::BufferUsages, cap: u64) -> Self {
+impl<T: Pod> MutableBuffer<T> {
+    pub fn with_capacity(device: &wgpu::Device, usage: BufferUsages, capacity: u64) -> Self {
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
-            size: mem::size_of::<T>() as u64 * cap,
+            size: mem::size_of::<T>() as u64 * capacity,
             usage: usage | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        Self(ImmutableBuffer {
+        Self(Buffer {
             buffer,
-            cap,
+            cap: capacity,
             len: 0,
             data: std::marker::PhantomData,
         })
-    }
-
-    pub fn from_data(device: &wgpu::Device, usage: wgpu::BufferUsages, data: &[T]) -> Self {
-        Self(ImmutableBuffer::from_data(
-            device,
-            usage | wgpu::BufferUsages::COPY_DST,
-            data,
-        ))
     }
 
     pub fn upload(&self, queue: &wgpu::Queue, data: &[T]) {
