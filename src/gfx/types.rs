@@ -9,6 +9,7 @@ pub type BufferUsages = wgpu::BufferUsages;
 pub(crate) struct Vertex {
     pub(crate) position: [f32; 3],
     pub(crate) color: [f32; 4],
+    pub(crate) tex_coords: [f32; 2],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

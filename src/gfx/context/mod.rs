@@ -2,8 +2,8 @@ mod batch_ext;
 mod buffer_ext;
 mod pipeline_ext;
 mod texture_ext;
-
 mod pipeline_desc;
+mod pass;
 
 pub use batch_ext::BatchExt;
 pub use buffer_ext::BufferExt;
@@ -24,10 +24,12 @@ use crate::{
     },
 };
 
+use self::pass::RenderPass;
+
 use super::{
     buffer::{Buffer, MutableBuffer},
     types::{Pipeline, Shader, ShaderStage, Vertex},
-    Color,
+    Color, texture::{Texture, TextureRef},
 };
 
 const MAX_QUAD_COUNT: u64 = 1000;
@@ -51,6 +53,8 @@ pub struct GfxContext {
     vertices_off: usize,
     index_buffer: Buffer<u16>,
     vertex_buffer: MutableBuffer<Vertex>,
+    render_passes: Vec<RenderPass>,
+    default_texture: TextureRef,
 }
 
 impl GfxContext {
@@ -116,6 +120,8 @@ impl GfxContext {
         let fragment_shader =
             create_shader(&device, ShaderStage::Fragment, DEFAULT_FRAGMENT_SHADER);
 
+        let default_texture = Texture::from_bytes(&device, &queue,vec![255, 255, 255, 255], crate::prelude::FilterMode::Nearest).unwrap();
+
         let pipeline = create_pipeline(
             &device,
             &PipelineDescriptor {
@@ -123,6 +129,7 @@ impl GfxContext {
                 fragment_shader,
                 texture_format: surface_format,
             },
+            &default_texture,
         );
 
         let mut vertices = Vec::with_capacity(MAX_VERTEX_COUNT as usize);
@@ -130,7 +137,11 @@ impl GfxContext {
             vertices.set_len(MAX_VERTEX_COUNT as usize);
         }
 
-        let mut indices = [0u16; MAX_INDEX_COUNT as usize];
+        let mut indices = Vec::with_capacity(MAX_INDEX_COUNT as usize);
+        unsafe {
+            indices.set_len(MAX_INDEX_COUNT as usize);
+        }
+
         let mut offset = 0;
 
         for i in (0..MAX_INDEX_COUNT as usize).step_by(6) {
@@ -157,6 +168,12 @@ impl GfxContext {
             vertices_off: 0,
             index_buffer,
             vertex_buffer,
+            render_passes: vec![
+                RenderPass {
+                    texture: default_texture.clone(),
+                }
+            ],
+            default_texture,
         }
     }
 

@@ -4,5 +4,5 @@ pub use crate::{
     app::App,
     config::Config,
     event::EventHandler,
-    gfx::{BatchExt, Color, GfxContext, PipelineExt, TextureExt},
+    gfx::{BatchExt, Color, FilterMode, GfxContext, PipelineExt, TextureExt},
 };

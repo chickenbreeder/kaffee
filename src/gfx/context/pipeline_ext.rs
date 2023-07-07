@@ -1,37 +1,12 @@
-use crate::gfx::types::{Pipeline, Vertex};
+use crate::gfx::{types::{Pipeline, Vertex}, texture::TextureRef};
 
 use super::{GfxContext, PipelineDescriptor};
 
-pub(super) fn create_pipeline(device: &wgpu::Device, descriptor: &PipelineDescriptor) -> Pipeline {
-    let camera_bind_group_layout =
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                count: None,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-            }],
-        });
-
-    /*
-    let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: None,
-        layout: &&camera_bind_group_layout,
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: camera_buffer.handle().as_entire_binding(),
-        }],
-    });
-    */
+pub(super) fn create_pipeline(device: &wgpu::Device, descriptor: &PipelineDescriptor, default_texture: &TextureRef) -> Pipeline {
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
-        bind_group_layouts: &[],
+        bind_group_layouts: &[default_texture.bind_group_layout()],
         push_constant_ranges: &[],
     });
 
@@ -76,7 +51,7 @@ pub(super) fn create_pipeline(device: &wgpu::Device, descriptor: &PipelineDescri
 pub trait PipelineExt {
     fn set_pipeline(&mut self, pipeline: &Pipeline);
 
-    fn create_pipeline(&self, descriptor: &PipelineDescriptor) -> Pipeline;
+    fn create_pipeline(&self, descriptor: &PipelineDescriptor, default_texture: &TextureRef) -> Pipeline;
 }
 
 impl PipelineExt for GfxContext {
@@ -84,7 +59,7 @@ impl PipelineExt for GfxContext {
         unimplemented!()
     }
 
-    fn create_pipeline(&self, descriptor: &PipelineDescriptor) -> Pipeline {
-        create_pipeline(&self.device, descriptor)
+    fn create_pipeline(&self, descriptor: &PipelineDescriptor, default_texture: &TextureRef) -> Pipeline {
+        create_pipeline(&self.device, descriptor, default_texture)
     }
 }

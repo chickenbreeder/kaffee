@@ -1,15 +1,44 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use image::RgbaImage;
+use wgpu::{BindGroup, BindGroupLayout};
 
 use crate::{error::ErrorKind, fs};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilterMode {
+    Linear,
+    Nearest,
+}
+
+impl Into<wgpu::FilterMode> for FilterMode {
+    fn into(self) -> wgpu::FilterMode {
+        match self {
+            FilterMode::Linear => wgpu::FilterMode::Linear,
+            FilterMode::Nearest => wgpu::FilterMode::Nearest,
+        }
+    }
+}
+
 pub struct Texture {
-    pub(crate) texture: wgpu::Texture,
-    pub(crate) view: wgpu::TextureView,
-    pub(crate) sampler: wgpu::Sampler,
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
     width: u32,
     height: u32,
+    bind_group_layout: BindGroupLayout,
+    bind_group: BindGroup,
+}
+
+#[derive(Clone)]
+pub struct TextureRef(Arc<Texture>);
+
+impl std::ops::Deref for TextureRef {
+    type Target = Texture;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl Texture {
@@ -17,7 +46,8 @@ impl Texture {
         path: P,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-    ) -> Result<Self, ErrorKind>
+        filter_mode: FilterMode,
+    ) -> Result<TextureRef, ErrorKind>
     where
         P: AsRef<Path>,
     {
@@ -25,21 +55,27 @@ impl Texture {
         let dyn_img = image::load_from_memory(&bytes).expect("Failed to create image");
         let rgba_image: RgbaImage = dyn_img.to_rgba8();
 
-        Self::new(device, queue, &rgba_image)
+        Self::new(device, queue, &rgba_image, filter_mode)
     }
 
     pub(crate) fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        bytes: &[u8],
-    ) -> Result<Self, ErrorKind> {
-        let data: Vec<u8> = vec![255, 255, 255, 255];
-        let rgba_image: RgbaImage = RgbaImage::from_raw(1, 1, data).expect("Failed to cr");
+        bytes: Vec<u8>,
+        filter_mode: FilterMode,
+    ) -> Result<TextureRef, ErrorKind> {
+        //let data: Vec<u8> = vec![255, 255, 255, 255];
+        let rgba_image: RgbaImage = RgbaImage::from_raw(1, 1, bytes).expect("Failed to cr");
 
-        Self::new(device, queue, &rgba_image)
+        Self::new(device, queue, &rgba_image, filter_mode)
     }
 
-    fn new(device: &wgpu::Device, queue: &wgpu::Queue, img: &RgbaImage) -> Result<Self, ErrorKind> {
+    fn new(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        img: &RgbaImage,
+        filter_mode: FilterMode,
+    ) -> Result<TextureRef, ErrorKind> {
         let dim = img.dimensions();
         let width = dim.0;
         let height = dim.1;
@@ -78,24 +114,38 @@ impl Texture {
         );
 
         let texture_view = diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let filter_mode = filter_mode.into();
 
-        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
+            mipmap_filter: filter_mode,
             ..Default::default()
         });
 
-        Ok(Self {
+        let (bind_group_layout, bind_group) =
+            Self::create_bind_group(device, &texture_view, &sampler);
+
+        Ok(TextureRef(Arc::new(Self {
             texture: diffuse_texture,
             view: texture_view,
-            sampler: diffuse_sampler,
+            sampler,
             width,
             height,
-        })
+            bind_group_layout,
+            bind_group,
+        })))
+    }
+
+    pub(super) fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.bind_group_layout
+    }
+
+    pub(super) fn bind_group(&self) -> &wgpu::BindGroup {
+        &self.bind_group
     }
 
     pub fn width(&self) -> u32 {
@@ -116,5 +166,50 @@ impl Texture {
 
     pub(crate) fn sampler(&self) -> &wgpu::Sampler {
         &self.sampler
+    }
+
+    fn create_bind_group(
+        device: &wgpu::Device,
+        texture_view: &wgpu::TextureView,
+        sampler: &wgpu::Sampler,
+    ) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(sampler),
+                },
+            ],
+        });
+
+        (bind_group_layout, bind_group)
     }
 }
