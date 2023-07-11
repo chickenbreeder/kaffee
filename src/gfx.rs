@@ -1,4 +1,5 @@
 mod buffer;
+mod camera;
 mod color;
 mod context;
 mod texture;

@@ -9,6 +9,7 @@ pub(super) fn create_pipeline(
     device: &wgpu::Device,
     descriptor: &PipelineDescriptor,
     default_texture: &TextureRef,
+    camera_bind_group_layout: &wgpu::BindGroupLayout,
 ) -> Pipeline {
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
@@ -61,6 +62,7 @@ pub trait PipelineExt {
         &self,
         descriptor: &PipelineDescriptor,
         default_texture: &TextureRef,
+        camera_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> Pipeline;
 }
 
@@ -73,7 +75,13 @@ impl PipelineExt for GfxContext {
         &self,
         descriptor: &PipelineDescriptor,
         default_texture: &TextureRef,
+        camera_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> Pipeline {
-        create_pipeline(&self.device, descriptor, default_texture)
+        create_pipeline(
+            &self.device,
+            descriptor,
+            default_texture,
+            camera_bind_group_layout,
+        )
     }
 }

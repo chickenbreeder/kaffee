@@ -1,3 +1,4 @@
+mod batch;
 mod batch_ext;
 mod buffer_ext;
 mod pass;
@@ -16,31 +17,19 @@ pub use texture_ext::TextureExt;
 use wgpu_glyph::{ab_glyph, GlyphBrush, GlyphBrushBuilder};
 use winit::window::Window;
 
-use crate::{
-    config::Config,
-    error::ErrorKind,
-    gfx::{
-        context::{
-            buffer_ext::{create_buffer, create_buffer_mut},
-            pipeline_ext::create_pipeline,
-        },
-        types::BufferUsages,
-    },
-};
+use crate::{config::Config, error::ErrorKind, gfx::context::pipeline_ext::create_pipeline};
 
-use self::pass::RenderPass;
+use self::{batch::Batch, pass::RenderPass};
 
 use super::{
     buffer::{Buffer, MutableBuffer},
+    camera::Camera,
     texture::{Texture, TextureRef},
     types::{Pipeline, Shader, ShaderStage, Vertex},
     Color,
 };
 
-const MAX_QUAD_COUNT: u64 = 1000;
-const MAX_VERTEX_COUNT: u64 = MAX_QUAD_COUNT * 4;
-const MAX_INDEX_COUNT: u64 = MAX_QUAD_COUNT * 6;
-
+const MAX_QUAD_COUNT: usize = 1000;
 const DEFAULT_VERTEX_SHADER: &'static str = include_str!("../../res/shaders/default.vert.glsl");
 const DEFAULT_FRAGMENT_SHADER: &'static str = include_str!("../../res/shaders/default.frag.glsl");
 
@@ -54,14 +43,14 @@ pub struct GfxContext {
     texture_format: wgpu::TextureFormat,
     clear_color: Color,
     pipeline: Pipeline,
-    vertices: Vec<Vertex>,
-    vertices_off: usize,
-    index_buffer: Buffer<u16>,
-    vertex_buffer: MutableBuffer<Vertex>,
+    batch: Batch<MAX_QUAD_COUNT>,
     staging_belt: wgpu::util::StagingBelt,
     render_passes: Vec<RenderPass>,
     default_texture: TextureRef,
     glyph_brush: GlyphBrush<()>,
+    camera: Camera,
+    camera_buffer: Buffer<Camera>,
+    camera_bind_group: wgpu::BindGroup,
 }
 
 impl GfxContext {
@@ -134,40 +123,7 @@ impl GfxContext {
             crate::prelude::FilterMode::Nearest,
         )?;
 
-        let pipeline = create_pipeline(
-            &device,
-            &PipelineDescriptor {
-                vertex_shader,
-                fragment_shader,
-                texture_format,
-            },
-            &default_texture,
-        );
-
-        let mut vertices = Vec::with_capacity(MAX_VERTEX_COUNT as usize);
-        unsafe {
-            vertices.set_len(MAX_VERTEX_COUNT as usize);
-        }
-
-        let mut indices = Vec::with_capacity(MAX_INDEX_COUNT as usize);
-        unsafe {
-            indices.set_len(MAX_INDEX_COUNT as usize);
-        }
-
-        let mut offset = 0;
-
-        for i in (0..MAX_INDEX_COUNT as usize).step_by(6) {
-            indices[i] = 0 + offset;
-            indices[i + 1] = 1 + offset;
-            indices[i + 2] = 2 + offset;
-            indices[i + 3] = 2 + offset;
-            indices[i + 4] = 3 + offset;
-            indices[i + 5] = 0 + offset;
-            offset += 4;
-        }
-
-        let index_buffer = create_buffer(&device, BufferUsages::INDEX, &indices);
-        let vertex_buffer = create_buffer_mut(&device, BufferUsages::VERTEX, MAX_VERTEX_COUNT);
+        let batch = Batch::new(&device);
 
         let default_font =
             ab_glyph::FontArc::try_from_slice(include_bytes!("../../res/fonts/KenneyMini.ttf"))
@@ -178,6 +134,44 @@ impl GfxContext {
             .texture_filter_method(wgpu::FilterMode::Nearest)
             .build(&device, texture_format);
 
+        let camera = Camera::new(config.width as f32, config.height as f32, 0., 0.);
+        let camera_buffer = Buffer::from_data(&device, wgpu::BufferUsages::UNIFORM, &[camera]);
+
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: None,
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.handle().as_entire_binding(),
+            }],
+        });
+
+        let pipeline = create_pipeline(
+            &device,
+            &PipelineDescriptor {
+                vertex_shader,
+                fragment_shader,
+                texture_format,
+            },
+            &default_texture,
+            &camera_bind_group_layout,
+        );
+
         Ok(Self {
             instance,
             device,
@@ -186,16 +180,16 @@ impl GfxContext {
             texture_format,
             clear_color: Color::BLACK,
             pipeline,
-            vertices,
-            vertices_off: 0,
-            index_buffer,
-            vertex_buffer,
+            batch,
             staging_belt,
             render_passes: vec![RenderPass {
                 texture: default_texture.clone(),
             }],
             default_texture,
             glyph_brush,
+            camera,
+            camera_buffer,
+            camera_bind_group,
         })
     }
 

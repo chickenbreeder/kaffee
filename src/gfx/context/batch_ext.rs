@@ -15,27 +15,30 @@ pub trait BatchExt {
 
 impl BatchExt for GfxContext {
     fn draw_rectangle(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color) {
-        self.vertices[self.vertices_off] = Vertex {
+        let offset = self.batch.offset();
+
+        self.batch[offset] = Vertex {
             position: [x + w, y + h, 0.0],
             color: color.into(),
             tex_coords: [1., 1.],
         };
-        self.vertices[self.vertices_off + 1] = Vertex {
+        self.batch[offset + 1] = Vertex {
             position: [x + w, y, 0.0],
             color: color.into(),
             tex_coords: [1., 0.],
         };
-        self.vertices[self.vertices_off + 2] = Vertex {
+        self.batch[offset + 2] = Vertex {
             position: [x, y, 0.0],
             color: color.into(),
             tex_coords: [0., 0.],
         };
-        self.vertices[self.vertices_off + 3] = Vertex {
+        self.batch[offset + 3] = Vertex {
             position: [x, y + h, 0.0],
             color: color.into(),
             tex_coords: [0., 1.],
         };
-        self.vertices_off += 4;
+
+        self.batch.set_offset(offset + 4);
     }
 
     fn draw_quad(&mut self, x: f32, y: f32, w: f32, color: Color) {
@@ -45,8 +48,7 @@ impl BatchExt for GfxContext {
     fn draw_texture(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, texture: Texture) {}
 
     fn end_frame(&mut self) {
-        self.vertex_buffer.upload(&self.queue, &self.vertices);
-        self.vertices_off = 0;
+        self.batch.flush(&self.queue);
 
         let output = self
             .surface
@@ -75,13 +77,14 @@ impl BatchExt for GfxContext {
             });
 
             rpass.set_pipeline(&self.pipeline);
-            rpass.set_vertex_buffer(0, self.vertex_buffer.handle().slice(..));
+            rpass.set_vertex_buffer(0, self.batch.vertex_buffer().handle().slice(..));
+            rpass.set_bind_group(0, &self.camera_bind_group, &[]);
             rpass.set_bind_group(0, self.default_texture.bind_group(), &[]);
             rpass.set_index_buffer(
-                self.index_buffer.handle().slice(..),
+                self.batch.index_buffer().handle().slice(..),
                 wgpu::IndexFormat::Uint16,
             );
-            rpass.draw_indexed(0..self.index_buffer.len() as u32, 0, 0..1);
+            rpass.draw_indexed(0..self.batch.index_buffer().len() as u32, 0, 0..1);
         }
 
         self.glyph_brush
