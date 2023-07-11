@@ -3,14 +3,17 @@ mod buffer_ext;
 mod pass;
 mod pipeline_desc;
 mod pipeline_ext;
+mod text_ext;
 mod texture_ext;
 
 pub use batch_ext::BatchExt;
 pub use buffer_ext::BufferExt;
 pub use pipeline_desc::PipelineDescriptor;
 pub use pipeline_ext::PipelineExt;
+pub use text_ext::TextExt;
 pub use texture_ext::TextureExt;
 
+use wgpu_glyph::{ab_glyph, GlyphBrush, GlyphBrushBuilder};
 use winit::window::Window;
 
 use crate::{
@@ -48,14 +51,17 @@ pub struct GfxContext {
     device: wgpu::Device,
     queue: wgpu::Queue,
     surface: wgpu::Surface,
+    texture_format: wgpu::TextureFormat,
     clear_color: Color,
     pipeline: Pipeline,
     vertices: Vec<Vertex>,
     vertices_off: usize,
     index_buffer: Buffer<u16>,
     vertex_buffer: MutableBuffer<Vertex>,
+    staging_belt: wgpu::util::StagingBelt,
     render_passes: Vec<RenderPass>,
     default_texture: TextureRef,
+    glyph_brush: GlyphBrush<()>,
 }
 
 impl GfxContext {
@@ -95,7 +101,7 @@ impl GfxContext {
         let surface_caps = surface.get_capabilities(&adapter);
         log::info!("{surface_caps:#?}");
 
-        let surface_format = surface_caps
+        let texture_format = surface_caps
             .formats
             .iter()
             .copied()
@@ -104,7 +110,7 @@ impl GfxContext {
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
+            format: texture_format,
             width,
             height,
             present_mode: wgpu::PresentMode::Fifo,
@@ -133,7 +139,7 @@ impl GfxContext {
             &PipelineDescriptor {
                 vertex_shader,
                 fragment_shader,
-                texture_format: surface_format,
+                texture_format,
             },
             &default_texture,
         );
@@ -163,21 +169,33 @@ impl GfxContext {
         let index_buffer = create_buffer(&device, BufferUsages::INDEX, &indices);
         let vertex_buffer = create_buffer_mut(&device, BufferUsages::VERTEX, MAX_VERTEX_COUNT);
 
+        let default_font =
+            ab_glyph::FontArc::try_from_slice(include_bytes!("../../res/fonts/KenneyMini.ttf"))
+                .expect("Failed to create default font");
+
+        let staging_belt = wgpu::util::StagingBelt::new(1024);
+        let glyph_brush = GlyphBrushBuilder::using_font(default_font)
+            .texture_filter_method(wgpu::FilterMode::Nearest)
+            .build(&device, texture_format);
+
         Ok(Self {
             instance,
             device,
             queue,
             surface,
+            texture_format,
             clear_color: Color::BLACK,
             pipeline,
             vertices,
             vertices_off: 0,
             index_buffer,
             vertex_buffer,
+            staging_belt,
             render_passes: vec![RenderPass {
                 texture: default_texture.clone(),
             }],
             default_texture,
+            glyph_brush,
         })
     }
 

@@ -84,7 +84,20 @@ impl BatchExt for GfxContext {
             rpass.draw_indexed(0..self.index_buffer.len() as u32, 0, 0..1);
         }
 
-        self.queue.submit(std::iter::once(encoder.finish()));
+        self.glyph_brush
+            .draw_queued(
+                &self.device,
+                &mut self.staging_belt,
+                &mut encoder,
+                &view,
+                1024,
+                768,
+            )
+            .expect("Failed to draw text");
+
+        self.staging_belt.finish();
+        self.queue.submit(Some(encoder.finish()));
         output.present();
+        self.staging_belt.recall();
     }
 }

@@ -13,6 +13,8 @@ impl EventHandler for GameState {
 
     fn redraw(&mut self, g: &mut GfxContext) {
         g.clear_color(Color::BLACK);
+        g.draw_text(35., 35., 40., Color::WHITE, "hello");
+        g.draw_text(35., 50., 80., Color::BLUE, "world");
         g.draw_quad(-0.5, -0.5, 1., Color::RED);
     }
 }

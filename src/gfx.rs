@@ -5,5 +5,5 @@ mod texture;
 mod types;
 
 pub use color::Color;
-pub use context::{BatchExt, GfxContext, PipelineDescriptor, PipelineExt, TextureExt};
+pub use context::{BatchExt, GfxContext, PipelineDescriptor, PipelineExt, TextExt, TextureExt};
 pub use texture::FilterMode;

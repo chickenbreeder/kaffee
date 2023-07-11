@@ -5,6 +5,6 @@ pub use crate::{
     config::Config,
     error::ErrorKind,
     event::EventHandler,
-    gfx::{BatchExt, Color, FilterMode, GfxContext, PipelineExt, TextureExt},
+    gfx::{BatchExt, Color, FilterMode, GfxContext, PipelineExt, TextExt, TextureExt},
     input::InputEvent,
 };
