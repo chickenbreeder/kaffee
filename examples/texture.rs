@@ -3,11 +3,12 @@ use kaffee::prelude::*;
 struct GameState;
 
 impl EventHandler for GameState {
-    fn init(&mut self, g: &mut GfxContext) {
-        //let texture = g.create_texture("./res/textures/atlas.png", FilterMode::Nearest);
+    fn init(&mut self, g: &mut GfxContext) -> Result<(), ErrorKind> {
+        let _ = g.create_texture("./res/textures/atlas.png", FilterMode::Nearest)?;
+        Ok(())
     }
 
-    fn input(&mut self) {}
+    fn input(&mut self, _: InputEvent) {}
 
     fn update(&mut self, _: f32) {}
 

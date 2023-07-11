@@ -3,9 +3,11 @@ use kaffee::prelude::*;
 struct GameState;
 
 impl EventHandler for GameState {
-    fn init(&mut self, _: &mut GfxContext) {}
+    fn init(&mut self, _: &mut GfxContext) -> Result<(), ErrorKind> {
+        Ok(())
+    }
 
-    fn input(&mut self) {}
+    fn input(&mut self, _: InputEvent) {}
 
     fn update(&mut self, _: f32) {}
 

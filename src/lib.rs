@@ -11,4 +11,5 @@ pub mod prelude;
 mod config;
 mod fs;
 mod gfx;
+mod input;
 mod math;

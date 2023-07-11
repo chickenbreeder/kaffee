@@ -1,18 +1,27 @@
 use std::path::Path;
 
-use crate::gfx::texture::{FilterMode, Texture};
+use crate::{
+    error::ErrorKind,
+    gfx::texture::{FilterMode, Texture, TextureRef},
+};
 
 use super::GfxContext;
 
 /// This extension trait enables texture creation for the [`GfxContext`].
 pub trait TextureExt {
-    fn create_texture<P: AsRef<Path>>(&self, path: P, filter_mode: FilterMode) -> Texture;
+    fn create_texture<P: AsRef<Path>>(
+        &self,
+        path: P,
+        filter_mode: FilterMode,
+    ) -> Result<TextureRef, ErrorKind>;
 }
 
 impl TextureExt for GfxContext {
-    fn create_texture<P: AsRef<Path>>(&self, path: P, filter_mode: FilterMode) -> Texture {
-        let texture = Texture::from_path(path, &self.device, &self.queue, filter_mode)
-            .expect("Failed to create texture");
-        todo!()
+    fn create_texture<P: AsRef<Path>>(
+        &self,
+        path: P,
+        filter_mode: FilterMode,
+    ) -> Result<TextureRef, ErrorKind> {
+        Texture::from_path(path, &self.device, &self.queue, filter_mode)
     }
 }

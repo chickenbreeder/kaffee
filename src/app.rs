@@ -10,8 +10,11 @@
 //! struct GameState;
 //!
 //! impl EventHandler for GameState {
-//!     fn init(&mut self, g: &mut GfxContext) {}
-//!     fn input(&mut self) {}
+//!     fn init(&mut self, g: &mut GfxContext) -> Result<(), ErrorKind> {
+//!         Ok(())
+//!     }
+//!
+//!     fn input(&mut self, _: InputEvent) {}
 //!     fn update(&mut self, dt: f32) {}
 //!     fn redraw(&mut self, g: &mut GfxContext) {}
 //! }
@@ -29,7 +32,13 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::{config::Config, event::EventHandler, gfx::GfxContext, prelude::BatchExt};
+use crate::{
+    config::Config,
+    event::EventHandler,
+    gfx::GfxContext,
+    input::{InputEvent, KeyEvent},
+    prelude::BatchExt,
+};
 
 /// A `kaffee` application.
 pub struct App<H: 'static + EventHandler> {
@@ -54,7 +63,10 @@ impl<H: 'static + EventHandler> App<H> {
             .build(&event_loop)
             .expect("Failed to create window with given settings");
 
-        let gfx_ctx = GfxContext::new(&window, config).await;
+        let gfx_ctx = match GfxContext::new(&window, config).await {
+            Ok(ctx) => ctx,
+            Err(why) => panic!("Failed to create GfxContext: {:?}", why),
+        };
 
         Self {
             window,
@@ -65,7 +77,9 @@ impl<H: 'static + EventHandler> App<H> {
     }
 
     pub fn run(mut self) -> ! {
-        self.event_handler.init(&mut self.gfx_ctx);
+        self.event_handler
+            .init(&mut self.gfx_ctx)
+            .expect("Failed to initialize application");
 
         self.event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
@@ -80,6 +94,19 @@ impl<H: 'static + EventHandler> App<H> {
                     self.gfx_ctx.end_frame();
                 }
                 Event::WindowEvent { ref event, .. } => match event {
+                    WindowEvent::KeyboardInput {
+                        device_id: _,
+                        input,
+                        is_synthetic: _,
+                    } => match input.virtual_keycode {
+                        None => (),
+                        Some(key_code) => {
+                            self.event_handler.input(InputEvent::Key(KeyEvent {
+                                state: input.state,
+                                key: key_code,
+                            }));
+                        }
+                    },
                     WindowEvent::CloseRequested => {
                         *control_flow = ControlFlow::Exit;
                     }

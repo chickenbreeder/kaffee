@@ -1,9 +1,9 @@
 mod batch_ext;
 mod buffer_ext;
+mod pass;
+mod pipeline_desc;
 mod pipeline_ext;
 mod texture_ext;
-mod pipeline_desc;
-mod pass;
 
 pub use batch_ext::BatchExt;
 pub use buffer_ext::BufferExt;
@@ -15,6 +15,7 @@ use winit::window::Window;
 
 use crate::{
     config::Config,
+    error::ErrorKind,
     gfx::{
         context::{
             buffer_ext::{create_buffer, create_buffer_mut},
@@ -28,17 +29,17 @@ use self::pass::RenderPass;
 
 use super::{
     buffer::{Buffer, MutableBuffer},
+    texture::{Texture, TextureRef},
     types::{Pipeline, Shader, ShaderStage, Vertex},
-    Color, texture::{Texture, TextureRef},
+    Color,
 };
 
 const MAX_QUAD_COUNT: u64 = 1000;
 const MAX_VERTEX_COUNT: u64 = MAX_QUAD_COUNT * 4;
 const MAX_INDEX_COUNT: u64 = MAX_QUAD_COUNT * 6;
 
-const DEFAULT_VERTEX_SHADER: &'static str = include_str!("../../../res/shaders/default.vert.glsl");
-const DEFAULT_FRAGMENT_SHADER: &'static str =
-    include_str!("../../../res/shaders/default.frag.glsl");
+const DEFAULT_VERTEX_SHADER: &'static str = include_str!("../../res/shaders/default.vert.glsl");
+const DEFAULT_FRAGMENT_SHADER: &'static str = include_str!("../../res/shaders/default.frag.glsl");
 
 /// Enables basic operations like drawing or shader creation.
 /// This type implements multiple extension traits such as [`TextureExt`] and [`BatchExt`] to keep the code cleaner and more readable.
@@ -59,7 +60,7 @@ pub struct GfxContext {
 
 impl GfxContext {
     /// Creates a new [`GfxContext`]. When creating a new app, an instance of [`GfxContext`] will be created as well.
-    pub async fn new(window: &Window, config: &Config) -> Self {
+    pub async fn new(window: &Window, config: &Config) -> Result<Self, ErrorKind> {
         let width = window.inner_size().width;
         let height = window.inner_size().height;
 
@@ -77,7 +78,7 @@ impl GfxContext {
                 force_fallback_adapter: false,
             })
             .await
-            .expect("Failed to request an adapter");
+            .expect("No suitable adapter was found");
 
         let (device, queue) = adapter
             .request_device(
@@ -120,7 +121,12 @@ impl GfxContext {
         let fragment_shader =
             create_shader(&device, ShaderStage::Fragment, DEFAULT_FRAGMENT_SHADER);
 
-        let default_texture = Texture::from_bytes(&device, &queue,vec![255, 255, 255, 255], crate::prelude::FilterMode::Nearest).unwrap();
+        let default_texture = Texture::from_bytes(
+            &device,
+            &queue,
+            vec![255, 255, 255, 255],
+            crate::prelude::FilterMode::Nearest,
+        )?;
 
         let pipeline = create_pipeline(
             &device,
@@ -157,7 +163,7 @@ impl GfxContext {
         let index_buffer = create_buffer(&device, BufferUsages::INDEX, &indices);
         let vertex_buffer = create_buffer_mut(&device, BufferUsages::VERTEX, MAX_VERTEX_COUNT);
 
-        Self {
+        Ok(Self {
             instance,
             device,
             queue,
@@ -168,13 +174,11 @@ impl GfxContext {
             vertices_off: 0,
             index_buffer,
             vertex_buffer,
-            render_passes: vec![
-                RenderPass {
-                    texture: default_texture.clone(),
-                }
-            ],
+            render_passes: vec![RenderPass {
+                texture: default_texture.clone(),
+            }],
             default_texture,
-        }
+        })
     }
 
     pub fn clear_color(&mut self, color: Color) {

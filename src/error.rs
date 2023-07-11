@@ -7,7 +7,7 @@ pub enum ErrorKind {
 
 #[derive(Debug)]
 pub enum GfxErrorKind {
-    SurfaceCreationFailed,
+    SurfaceError,
 }
 
 impl From<std::io::Error> for ErrorKind {

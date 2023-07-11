@@ -1,9 +1,15 @@
-use crate::gfx::{types::{Pipeline, Vertex}, texture::TextureRef};
+use crate::gfx::{
+    texture::TextureRef,
+    types::{Pipeline, Vertex},
+};
 
 use super::{GfxContext, PipelineDescriptor};
 
-pub(super) fn create_pipeline(device: &wgpu::Device, descriptor: &PipelineDescriptor, default_texture: &TextureRef) -> Pipeline {
-
+pub(super) fn create_pipeline(
+    device: &wgpu::Device,
+    descriptor: &PipelineDescriptor,
+    default_texture: &TextureRef,
+) -> Pipeline {
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
         bind_group_layouts: &[default_texture.bind_group_layout()],
@@ -51,7 +57,11 @@ pub(super) fn create_pipeline(device: &wgpu::Device, descriptor: &PipelineDescri
 pub trait PipelineExt {
     fn set_pipeline(&mut self, pipeline: &Pipeline);
 
-    fn create_pipeline(&self, descriptor: &PipelineDescriptor, default_texture: &TextureRef) -> Pipeline;
+    fn create_pipeline(
+        &self,
+        descriptor: &PipelineDescriptor,
+        default_texture: &TextureRef,
+    ) -> Pipeline;
 }
 
 impl PipelineExt for GfxContext {
@@ -59,7 +69,11 @@ impl PipelineExt for GfxContext {
         unimplemented!()
     }
 
-    fn create_pipeline(&self, descriptor: &PipelineDescriptor, default_texture: &TextureRef) -> Pipeline {
+    fn create_pipeline(
+        &self,
+        descriptor: &PipelineDescriptor,
+        default_texture: &TextureRef,
+    ) -> Pipeline {
         create_pipeline(&self.device, descriptor, default_texture)
     }
 }

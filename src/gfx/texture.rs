@@ -51,7 +51,7 @@ impl Texture {
     where
         P: AsRef<Path>,
     {
-        let bytes = fs::load_file(path).expect("Failed to load texture");
+        let bytes = fs::load_file(path)?;
         let dyn_img = image::load_from_memory(&bytes).expect("Failed to create image");
         let rgba_image: RgbaImage = dyn_img.to_rgba8();
 
@@ -154,18 +154,6 @@ impl Texture {
 
     pub fn height(&self) -> u32 {
         self.height
-    }
-
-    pub(crate) fn texture(&self) -> &wgpu::Texture {
-        &self.texture
-    }
-
-    pub(crate) fn view(&self) -> &wgpu::TextureView {
-        &self.view
-    }
-
-    pub(crate) fn sampler(&self) -> &wgpu::Sampler {
-        &self.sampler
     }
 
     fn create_bind_group(

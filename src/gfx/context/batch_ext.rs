@@ -1,4 +1,4 @@
-use crate::gfx::{types::Vertex, Color, texture::Texture};
+use crate::gfx::{texture::Texture, types::Vertex, Color};
 
 use super::GfxContext;
 
@@ -42,15 +42,16 @@ impl BatchExt for GfxContext {
         self.draw_rectangle(x, y, w, w, color)
     }
 
-    fn draw_texture(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, texture: Texture) {
-        
-    }
+    fn draw_texture(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, texture: Texture) {}
 
     fn end_frame(&mut self) {
         self.vertex_buffer.upload(&self.queue, &self.vertices);
         self.vertices_off = 0;
 
-        let output = self.surface.get_current_texture().unwrap();
+        let output = self
+            .surface
+            .get_current_texture()
+            .expect("Failed to retrieve current texture");
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
