@@ -80,7 +80,7 @@ impl BatchExt for GfxContext {
             rpass.set_pipeline(&self.pipeline);
             rpass.set_vertex_buffer(0, self.batch.vertex_buffer().handle().slice(..));
             rpass.set_bind_group(0, &self.camera_bind_group, &[]);
-            rpass.set_bind_group(0, self.default_texture.bind_group(), &[]);
+            rpass.set_bind_group(1, self.default_texture.bind_group(), &[]);
             rpass.set_index_buffer(
                 self.batch.index_buffer().handle().slice(..),
                 wgpu::IndexFormat::Uint16,
