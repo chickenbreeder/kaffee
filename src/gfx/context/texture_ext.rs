@@ -9,6 +9,8 @@ use super::GfxContext;
 
 /// This extension trait enables texture creation for the [`GfxContext`].
 pub trait TextureExt {
+
+    /// Loads and creates a new texture from the specified path.
     fn create_texture<P: AsRef<Path>>(
         &self,
         path: P,

@@ -2,6 +2,7 @@ use crate::gfx::{texture::Texture, types::Vertex, Color};
 
 use super::GfxContext;
 
+/// Adds support for basic drawing operations.
 pub trait BatchExt {
     fn draw_rectangle(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color);
 

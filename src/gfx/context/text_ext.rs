@@ -4,6 +4,7 @@ use crate::prelude::Color;
 
 use super::GfxContext;
 
+/// Adds support for text rendering.
 pub trait TextExt {
     fn draw_text(&mut self, x: f32, y: f32, scale: f32, color: Color, text: &str);
 }

@@ -34,7 +34,7 @@ const DEFAULT_VERTEX_SHADER: &'static str = include_str!("../../res/shaders/defa
 const DEFAULT_FRAGMENT_SHADER: &'static str = include_str!("../../res/shaders/default.frag.glsl");
 
 /// Enables basic operations like drawing or shader creation.
-/// This type implements multiple extension traits such as [`TextureExt`] and [`BatchExt`] to keep the code cleaner and more readable.
+/// This type implements multiple extension traits such as [`TextureExt`] or [`BatchExt`] to keep the code cleaner and more readable.
 pub struct GfxContext {
     instance: wgpu::Instance,
     device: wgpu::Device,

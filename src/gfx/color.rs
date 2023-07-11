@@ -34,6 +34,7 @@ impl Into<[f32; 4]> for Color {
     }
 }
 
+#[doc(hidden)]
 impl Into<wgpu::Color> for Color {
     fn into(self) -> wgpu::Color {
         wgpu::Color {
